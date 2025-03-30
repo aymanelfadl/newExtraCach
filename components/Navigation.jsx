@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';  // Import MaterialCommunityIcons
-import { View, Text } from 'react-native';
+import { View, Text, Dimensions } from 'react-native';
 
 // Test function component
 const testFunc = () => {
@@ -12,6 +12,7 @@ const testFunc = () => {
 }
 
 const Tab = createBottomTabNavigator();
+const { width } = Dimensions.get('window'); 
 
 export const TabNavigator = () => (
     <Tab.Navigator
@@ -25,20 +26,22 @@ export const TabNavigator = () => (
         tabBarIcon: ({ color, size }) => {
           let iconName;
 
+          // Assign icons based on the route name
           if (route.name === 'Accueil') {
-            iconName = 'home';  
+            iconName = 'home';
           } else if (route.name === 'Dépenses') {
-            iconName = 'credit-card';  
+            iconName = 'credit-card';
           } else if (route.name === 'Revenu') {
-            iconName = 'currency-usd';  
+            iconName = 'currency-usd';
           } else if (route.name === 'Employé') {
-            iconName = 'account';  
+            iconName = 'account';
           } else if (route.name === 'Analyse') {
-            iconName = 'chart-line'; 
+            iconName = 'chart-line';
           }
 
           return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
         },
+        tabBarLabel: width >= 300 ? route.name : '',
         headerShown: false,
       })}
     >

@@ -1,4 +1,4 @@
-import { TabNavigator } from './Navigation';
+import { TabNavigator } from '../components/Navigation';
 
 // const Stack = createStackNavigator();
 
