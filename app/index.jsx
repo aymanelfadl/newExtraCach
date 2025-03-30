@@ -1,9 +1,20 @@
-import { View, Text } from "react-native";
+import { TabNavigator } from './Navigation';
 
-export default function App() {
-    return (
-        <View>
-            <Text>Hello World</Text>
-        </View>
-    );
-}
+// const Stack = createStackNavigator();
+
+// const testFunc = () => {
+//     return (
+//         <View>
+//             <Text>Test</Text>
+//         </View>
+//     )
+// }
+
+const App = () => {
+
+  return (
+    <TabNavigator />
+  );
+};
+
+export default App;
