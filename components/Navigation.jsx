@@ -1,11 +1,13 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MaterialCommunityIcons } from '@expo/vector-icons';  // Import MaterialCommunityIcons
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { View, Text, Dimensions } from 'react-native';
+import { Header }  from './Header'; 
 
 // Test function component
 const testFunc = () => {
     return (
         <View>
+            <Header />
             <Text>Test</Text>
         </View>
     )
