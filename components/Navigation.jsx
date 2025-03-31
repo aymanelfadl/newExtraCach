@@ -1,13 +1,12 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { View, Text, Dimensions } from 'react-native';
-import { Header }  from './Header'; 
+import Home from '../app/screens/Home';
 
-// Test function component
+
 const testFunc = () => {
     return (
         <View>
-            <Header />
             <Text>Test</Text>
         </View>
     )
@@ -49,7 +48,7 @@ export const TabNavigator = () => (
     >
       <Tab.Screen
         name="Accueil"
-        component={testFunc}
+        component={Home}
       />
       <Tab.Screen
         name="Dépenses"
