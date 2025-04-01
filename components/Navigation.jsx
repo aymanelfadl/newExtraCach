@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { View, Text, Dimensions } from 'react-native';
 import Home from '../app/screens/Home';
-
+import Expense from '../app/screens/Expense';
 
 const testFunc = () => {
     return (
@@ -52,7 +52,7 @@ export const TabNavigator = () => (
       />
       <Tab.Screen
         name="Dépenses"
-        component={testFunc}
+        component={Expense}
       />
       <Tab.Screen
         name="Revenu"

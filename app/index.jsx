@@ -1,12 +1,9 @@
 import { TabNavigator } from '../components/Navigation';
 
-// const Stack = createStackNavigator();
-
 const App = () => {
 
   return (
-	<TabNavigator />
-  );
+	  <TabNavigator /> );
 };
 
 export default App;

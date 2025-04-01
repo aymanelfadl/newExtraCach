@@ -1,7 +1,8 @@
 import { HomeButton } from "../../components/HomeButton";
 
 const Home = () => {
-  const DataBtns = [
+
+    const DataBtns = [
     { 
       title: "Nouvelle Dépense",
       description: "Enregistrer une nouvelle dépense", 
@@ -27,9 +28,10 @@ const Home = () => {
 
   return (
     <>
-      {DataBtns.map((btn, index) => (
-        <HomeButton key={index} btnData={btn} />
-      ))}
+    {
+        DataBtns.map((btn, index) => (
+            <HomeButton key={index} btnData={btn} />))
+    }
     </>
   );
 };
