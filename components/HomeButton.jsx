@@ -1,10 +1,11 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
-export const HomeButoon = ({ btnData }) => {
+export const HomeButton = ({ btnData }) => {
   return (
     <View>
       <View style={styles.titleContainer}>
-        <Text style={[styles.title, { color: btnData.backgroundColor }]}>
+        <Text style={[styles.title, { color: btnData.backgroundColor }]}> 
           {btnData.title}
         </Text>
         <View
@@ -12,14 +13,11 @@ export const HomeButoon = ({ btnData }) => {
         ></View>
       </View>
       <TouchableOpacity
-        style={[
-          styles.itemContainer,
-          { backgroundColor: btnData.backgroundColor },
-        ]}
+        style={[styles.itemContainer, { backgroundColor: btnData.backgroundColor }]}
         onPress={btnData.onPress}
       >
         <View style={styles.iconContainer}>
-          <Image source={btnData.icon} style={styles.icon} />
+          <Icon name={btnData.icon} size={30} color="white" />
         </View>
         <View style={styles.descriptionContainer}>
           <Text style={styles.description}>{btnData.description}</Text>
@@ -30,12 +28,6 @@ export const HomeButoon = ({ btnData }) => {
 };
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    margin: 0,
-    position: "relative",
-    backgroundColor: "white",
-  },
   itemContainer: {
     borderRadius: 40,
     borderColor: "#ccc",
@@ -73,12 +65,8 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginRight: 10,
     borderRadius: 100,
-    backgroundColor: "rgb(250 250 250)",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     padding: 10,
-  },
-  icon: {
-    width: 40,
-    height: 40,
   },
   descriptionContainer: {
     flex: 1,
