@@ -10,7 +10,7 @@ import UploadProgress from './UploadProgress';
 import { uploadImage, uploadAudio, addExpense, fetchExpenseSuggestions } from '../services/FirebaseService';
 
 const AddExpense = ({ visible, onClose }) => {
-  // Utility functions
+
   const formatDate = (date) => {
     const currentDate = date || new Date();
     const day = currentDate.getDate().toString().padStart(2, '0');
@@ -19,7 +19,6 @@ const AddExpense = ({ visible, onClose }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // State management
   const [description, setDescription] = useState('');
   const [spends, setSpends] = useState('');
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
@@ -35,7 +34,6 @@ const AddExpense = ({ visible, onClose }) => {
   const [userId, setUserId] = useState(null);
   const [showDate, setShowDate] = useState(false);
 
-  // Load user ID from AsyncStorage
   useEffect(() => {
     const getUserId = async () => {
       try {
@@ -51,7 +49,6 @@ const AddExpense = ({ visible, onClose }) => {
     getUserId();
   }, []);
 
-  // Load suggestions from Firestore
   useEffect(() => {
     let unsubscribe;
     
@@ -66,7 +63,6 @@ const AddExpense = ({ visible, onClose }) => {
     };
   }, [userId]);
 
-  // Handle form submission
   const handleAddExpense = async () => {
     setIsUploading(true);
     const defaultName = "Depense " + formatDate(new Date());
@@ -75,7 +71,6 @@ const AddExpense = ({ visible, onClose }) => {
     try {
       setUploadProgress(0);
 
-      // Handle media upload
       let mediaUrl;
       if (uploadType === 'image' || uploadType === null) {
         mediaUrl = await uploadImage(thumbnail);
@@ -85,7 +80,6 @@ const AddExpense = ({ visible, onClose }) => {
       
       setUploadProgress(0.50);
 
-      // Add expense to Firestore
       await addExpense(userId, {
         description: finalDescription,
         thumbnail: mediaUrl,
@@ -96,7 +90,6 @@ const AddExpense = ({ visible, onClose }) => {
 
       setUploadProgress(1);
       
-      // Reset form state
       resetForm();
       onClose();
     } catch (error) {
@@ -106,7 +99,6 @@ const AddExpense = ({ visible, onClose }) => {
     }
   };
 
-  // Reset form state
   const resetForm = () => {
     setDescription('');
     setSpends('');
@@ -118,7 +110,11 @@ const AddExpense = ({ visible, onClose }) => {
     setSelectedDate(formatDate(new Date()));
   };
 
-  // Render modal content
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   const renderModalContent = () => {
     return (
       <View style={styles.modalContent}>
@@ -133,7 +129,7 @@ const AddExpense = ({ visible, onClose }) => {
           setShowDate={setShowDate}
           suggestions={suggestions}
           onSubmit={handleAddExpense}
-          onClose={onClose}
+          onClose={handleClose}
           formatDate={formatDate}
         />
         
