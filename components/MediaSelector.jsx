@@ -1,26 +1,42 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker'; // Updated import
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const MediaSelector = ({ thumbnail, setThumbnail, setUploadType, isRecording, audioFile }) => {
   
-  const handleLaunchCamera = () => {
-    launchCamera({ mediaType: 'photo' }, (response) => {
-      if (!response.didCancel && !response.error) {
-        setThumbnail({ uri: response.assets[0].uri });
+  const handleLaunchCamera = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (permissionResult.granted) {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
+      if (!result.cancelled) {
+        setThumbnail({ uri: result.uri });
         setUploadType('image');
       }
-    });
+    } else {
+      alert('Camera permission is required!');
+    }
   };
 
-  const handleLaunchImageLibrary = () => {
-    launchImageLibrary({ mediaType: 'photo' }, (response) => {
-      if (!response.didCancel && !response.error) {
-        setThumbnail({ uri: response.assets[0].uri });
+  const handleLaunchImageLibrary = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted) {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
+      if (!result.cancelled) {
+        setThumbnail({ uri: result.uri });
         setUploadType('image');
       }
-    });
+    } else {
+      alert('Gallery permission is required!');
+    }
   };
 
   // Only show thumbnail if it exists

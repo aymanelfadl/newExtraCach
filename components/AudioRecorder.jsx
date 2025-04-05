@@ -1,9 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import AudioRecord from 'react-native-audio-record';
-import Sound from 'react-native-sound';
-import { PermissionsAndroid } from 'react-native';
+import { Audio } from 'expo-av';
 
 const AudioRecorder = ({ 
   isRecording, 
@@ -13,51 +11,33 @@ const AudioRecorder = ({
   setAudioFile,
   isAudioPlaying,
   setIsAudioPlaying,
-  sound,
-  setSound,
-  thumbnail
+  thumbnail 
 }) => {
+  const [recording, setRecording] = useState(null);
+  const [sound, setSound] = useState();
 
-  const requestPermissions = async () => {
-    try {
-      const granted = await PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-      ]);
-
-      if (
-        granted['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED &&
-        granted['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED
-      ) {
-        console.log('Audio recording permissions granted');
-        return true;
-      } else {
-        console.log('Audio recording permissions denied');
-        return false;
-      }
-    } catch (err) {
-      console.warn(err);
-      return false;
-    }
-  };
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync(); // Clean up sound object
+        }
+      : undefined;
+  }, [sound]);
 
   const startRecording = async () => {
-    const hasPermissions = await requestPermissions();
-    if (!hasPermissions) return;
-    
     try {
-      AudioRecord.init({
-        sampleRate: 44100,
-        channels: 2,
-        bitsPerSample: 16,
-        audioSource: 6,
-      });
-
-      AudioRecord.start();
-      setIsRecording(true);
-      setUploadType('audio');
-      console.log('Audio recording started');
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status === 'granted') {
+        const { recording } = await Audio.Recording.createAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY
+        );
+        setRecording(recording);
+        setIsRecording(true);
+        setUploadType('audio');
+        console.log('Audio recording started');
+      } else {
+        console.log('Permission denied');
+      }
     } catch (error) {
       console.error('Error starting audio recording:', error);
     }
@@ -65,42 +45,45 @@ const AudioRecorder = ({
 
   const stopRecording = async () => {
     try {
-      const audioFile = await AudioRecord.stop();
-      console.log('Audio recording stopped:', audioFile);
-      setAudioFile(audioFile);
-      setIsRecording(false);
-
-      const sound = new Sound(audioFile, '', (error) => {
-        if (error) {
-          console.log('Error loading sound:', error);
-        }
-      });
-      setSound(sound);
+      if (recording) {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        console.log('Audio recording stopped:', uri);
+        setAudioFile(uri);
+        setIsRecording(false);
+        const { sound } = await Audio.Sound.createAsync(
+          { uri },
+          { shouldPlay: false }
+        );
+        setSound(sound);
+      }
     } catch (error) {
       console.error('Error stopping audio recording:', error);
     }
   };
 
-  const playAudio = () => {
-    setIsAudioPlaying(true);
-    sound.play((success) => {
-      if (success) {
-        setIsAudioPlaying(false);
-      } else {
-        console.log('Playback failed due to audio decoding errors');
-      }
-    });
+  const playAudio = async () => {
+    try {
+      setIsAudioPlaying(true);
+      await sound.playAsync();
+      setIsAudioPlaying(false);
+    } catch (error) {
+      console.log('Error playing audio:', error);
+    }
   };
 
-  const stopPlayingAudio = () => {
-    setIsAudioPlaying(false);
-    sound.stop();
+  const stopPlayingAudio = async () => {
+    try {
+      setIsAudioPlaying(false);
+      await sound.stopAsync();
+    } catch (error) {
+      console.log('Error stopping audio:', error);
+    }
   };
 
-  // Only show audio player if audio file exists
   const renderAudioPlayer = () => {
     if (!audioFile) return null;
-    
+
     return (
       <View style={styles.audioIconContainer}>
         {isAudioPlaying ? (
@@ -116,10 +99,9 @@ const AudioRecorder = ({
     );
   };
 
-  // Only show recorder if no thumbnail and not currently recording/playing
   const renderRecordButton = () => {
     if (thumbnail || isAudioPlaying) return null;
-    
+
     if (isRecording) {
       return (
         <View style={styles.iconWrapper}>
@@ -163,7 +145,7 @@ const styles = StyleSheet.create({
     borderColor: "crimson",
     padding: 10,
     width: "30%",
-    alignSelf: 'center'
+    alignSelf: 'center',
   },
   icon: {
     alignItems: 'center',
