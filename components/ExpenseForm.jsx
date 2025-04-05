@@ -8,25 +8,13 @@ const ExpenseForm = ({
   setDescription, 
   spends, 
   setSpends, 
-  selectedDate, 
-  setSelectedDate,
   showDate,
-  setShowDate,
   suggestions,
   onSubmit,
   onClose,
-  formatDate
 }) => {
   
-  const showModeDate = () => {
-    setShowDate(true);
-  };
-  
-  const onChangeDate = (event, selectedDate) => {
-    setSelectedDate(formatDate(selectedDate));
-    setShowDate(false);
-  };
-  
+
   const filteredSuggestions = [...new Set(suggestions.filter(item =>
     new RegExp('^' + description.toLowerCase(), 'g').test(item.toLowerCase())
   ))];
@@ -41,16 +29,6 @@ const ExpenseForm = ({
     <View>
       <View style={styles.header}>
         <Text style={styles.title}>Nouvelle Dépense</Text>
-        <TouchableOpacity onPress={showModeDate} style={{paddingLeft:"6%"}} >
-          <Icon name="calendar-plus-o" color="crimson" size={30} />
-        </TouchableOpacity>
-        {showDate && (
-          <DateTimePicker 
-            testID='dateTimePicker' 
-            value={new Date()} 
-            onChange={onChangeDate} 
-          />
-        )}
       </View>
       
       <TextInput

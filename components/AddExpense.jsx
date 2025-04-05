@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Modal, StyleSheet } from 'react-native';
+import { View, Modal, StyleSheet, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import MediaSelector from './MediaSelector';
 import AudioRecorder from './AudioRecorder';
@@ -8,6 +10,7 @@ import ExpenseForm from './ExpenseForm';
 import UploadProgress from './UploadProgress';
 
 import { uploadImage, uploadAudio, addExpense, fetchExpenseSuggestions } from '../services/FirebaseService';
+
 
 const AddExpense = ({ visible, onClose }) => {
 
@@ -114,7 +117,12 @@ const AddExpense = ({ visible, onClose }) => {
     resetForm();
     onClose();
   };
-
+    
+  const onChangeDate = (event, selectedDate) => {
+    setSelectedDate(formatDate(selectedDate));
+    setShowDate(false);
+  };
+  
   const renderModalContent = () => {
     return (
       <View style={styles.modalContent}>
@@ -125,7 +133,6 @@ const AddExpense = ({ visible, onClose }) => {
           setSpends={setSpends}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
-          showDate={showDate}
           setShowDate={setShowDate}
           suggestions={suggestions}
           onSubmit={handleAddExpense}
@@ -134,6 +141,16 @@ const AddExpense = ({ visible, onClose }) => {
         />
         
         <View style={styles.mediaContainer}>
+          <TouchableOpacity onPress={() => setShowDate(true)}>
+            <Icon name="calendar-plus-o" color="crimson" size={30} />
+          </TouchableOpacity>
+          {showDate && (
+              <DateTimePicker 
+                testID='dateTimePicker' 
+                value={new Date()} 
+                onChange={onChangeDate} 
+              />
+          )}
           <AudioRecorder
             isRecording={isRecording}
             setIsRecording={setIsRecording}
