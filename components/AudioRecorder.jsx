@@ -20,7 +20,7 @@ const AudioRecorder = ({
   useEffect(() => {
     return sound
       ? () => {
-          sound.unloadAsync(); // Clean up sound object when unmounting
+          sound.unloadAsync();
         }
       : undefined;
   }, [sound]);
@@ -66,11 +66,9 @@ const AudioRecorder = ({
   const toggleAudioPlayPause = async () => {
     try {
       if (isAudioPlaying) {
-        // If audio is playing, stop it
         await sound.stopAsync();
         setIsAudioPlaying(false);
       } else {
-        // If audio is not playing, play it
         await sound.playAsync();
         setIsAudioPlaying(true);
       }
