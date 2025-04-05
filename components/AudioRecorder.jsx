@@ -11,15 +11,16 @@ const AudioRecorder = ({
   setAudioFile,
   isAudioPlaying,
   setIsAudioPlaying,
-  thumbnail 
+  sound,
+  setSound,
+  thumbnail
 }) => {
   const [recording, setRecording] = useState(null);
-  const [sound, setSound] = useState();
 
   useEffect(() => {
     return sound
       ? () => {
-          sound.unloadAsync(); // Clean up sound object
+          sound.unloadAsync(); // Clean up sound object when unmounting
         }
       : undefined;
   }, [sound]);
@@ -62,22 +63,19 @@ const AudioRecorder = ({
     }
   };
 
-  const playAudio = async () => {
+  const toggleAudioPlayPause = async () => {
     try {
-      setIsAudioPlaying(true);
-      await sound.playAsync();
-      setIsAudioPlaying(false);
+      if (isAudioPlaying) {
+        // If audio is playing, stop it
+        await sound.stopAsync();
+        setIsAudioPlaying(false);
+      } else {
+        // If audio is not playing, play it
+        await sound.playAsync();
+        setIsAudioPlaying(true);
+      }
     } catch (error) {
-      console.log('Error playing audio:', error);
-    }
-  };
-
-  const stopPlayingAudio = async () => {
-    try {
-      setIsAudioPlaying(false);
-      await sound.stopAsync();
-    } catch (error) {
-      console.log('Error stopping audio:', error);
+      console.log('Error toggling audio:', error);
     }
   };
 
@@ -86,15 +84,9 @@ const AudioRecorder = ({
 
     return (
       <View style={styles.audioIconContainer}>
-        {isAudioPlaying ? (
-          <TouchableOpacity onPress={stopPlayingAudio}>
-            <Icon name="stop" size={60} color="black" />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={playAudio}>
-            <Icon name="play" size={60} color="black" />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity onPress={toggleAudioPlayPause}>
+          <Icon name={isAudioPlaying ? "stop" : "play"} size={60} color="black" />
+        </TouchableOpacity>
       </View>
     );
   };
