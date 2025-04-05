@@ -1,15 +1,10 @@
 import AddExpense from '../../components/AddExpense';
 import { useState } from 'react';
 
-
-const Expense = () => {
-    
-    const [modalVisible, setModalVisible] = useState(false);
-
-    return (
-        <AddExpense visible={modalVisible} onClose={() => setModalVisible(false)} />
-    )
+const Expense = ({ visible, onClose }) => {
+  return (
+    <AddExpense visible={visible} onClose={onClose} />
+  );
 }
-
 
 export default Expense;

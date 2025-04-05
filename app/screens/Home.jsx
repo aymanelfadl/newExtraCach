@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { HomeButton } from "../../components/HomeButton";
+import Expense from './Expense';
 
 const Home = () => {
+  const [modalVisible, setModalVisible] = useState(false);
 
-    const DataBtns = [
+  const DataBtns = [
     { 
       title: "Nouvelle Dépense",
       description: "Enregistrer une nouvelle dépense", 
-      onPress: () => alert("Nouvelle Dépense"),
+      onPress: () => setModalVisible(true),  // Show modal when clicked
       backgroundColor: "rgb(244 63 94)",
       icon: "cash-minus" 
     },
@@ -28,10 +31,13 @@ const Home = () => {
 
   return (
     <>
-    {
+      {
         DataBtns.map((btn, index) => (
-            <HomeButton key={index} btnData={btn} />))
-    }
+          <HomeButton key={index} btnData={btn} /> 
+        ))
+      }
+
+      <Expense visible={modalVisible} onClose={() => setModalVisible(false)} />
     </>
   );
 };
