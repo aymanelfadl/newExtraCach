@@ -36,6 +36,8 @@ const AddExpense = ({ visible, onClose }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [userId, setUserId] = useState(null);
   const [showDate, setShowDate] = useState(false);
+  const [mediaModalVisible, setMediaModalVisible] = useState(false);
+
 
   useEffect(() => {
     const getUserId = async () => {
@@ -122,6 +124,50 @@ const AddExpense = ({ visible, onClose }) => {
     setSelectedDate(formatDate(selectedDate));
     setShowDate(false);
   };
+
+
+  const toggleMediaModal = () => {
+    setMediaModalVisible(!mediaModalVisible);
+  };
+
+  const handleSelectMediaOption = (option) => {
+    setUploadType(option);
+    setMediaModalVisible(false); // Close the modal after selection
+  };
+
+
+  const renderMediaOptionsModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={mediaModalVisible}
+      onRequestClose={toggleMediaModal}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <AudioRecorder
+              isRecording={isRecording}
+              setIsRecording={setIsRecording}
+              setUploadType={setUploadType}
+              audioFile={audioFile}
+              setAudioFile={setAudioFile}
+              isAudioPlaying={isAudioPlaying}
+              setIsAudioPlaying={setIsAudioPlaying}
+              sound={sound}
+              setSound={setSound}
+              thumbnail={thumbnail}
+            />
+            <MediaSelector
+              thumbnail={thumbnail}
+              setThumbnail={setThumbnail}
+              setUploadType={setUploadType}
+              isRecording={isRecording}
+              audioFile={audioFile}
+            />
+        </View>
+      </View>
+    </Modal>
+  );
   
   const renderModalContent = () => {
     return (
@@ -142,8 +188,13 @@ const AddExpense = ({ visible, onClose }) => {
         
         <View style={styles.mediaContainer}>
           <TouchableOpacity onPress={() => setShowDate(true)}>
-            <Icon name="calendar-plus-o" color="crimson" size={30} />
+            <Icon name="calendar-plus-o" color="#333333" style={{paddingHorizontal: 10}} size={30} />
           </TouchableOpacity>
+          
+          <TouchableOpacity onPress={toggleMediaModal}>
+            <Icon name="plus-circle" color="#333333" style={{paddingHorizontal: 10}} size={30} />
+          </TouchableOpacity>
+  
           {showDate && (
               <DateTimePicker 
                 testID='dateTimePicker' 
@@ -151,30 +202,13 @@ const AddExpense = ({ visible, onClose }) => {
                 onChange={onChangeDate} 
               />
           )}
-          <AudioRecorder
-            isRecording={isRecording}
-            setIsRecording={setIsRecording}
-            setUploadType={setUploadType}
-            audioFile={audioFile}
-            setAudioFile={setAudioFile}
-            isAudioPlaying={isAudioPlaying}
-            setIsAudioPlaying={setIsAudioPlaying}
-            sound={sound}
-            setSound={setSound}
-            thumbnail={thumbnail}
-          />
-          
-          <MediaSelector
-            thumbnail={thumbnail}
-            setThumbnail={setThumbnail}
-            setUploadType={setUploadType}
-            isRecording={isRecording}
-            audioFile={audioFile}
-          />
+  
+          {renderMediaOptionsModal()}
         </View>
       </View>
     );
   };
+  
 
   return (
     <>
@@ -219,11 +253,18 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   mediaContainer: {
-    flexDirection: 'column',
+    flexDirection: 'row',
+    alignSelf: 'center',
+    justifyContent: 'space-between',  
     alignItems: 'center',
-    justifyContent: 'center',
     marginVertical: 10,
+    width: '75%',
+    padding: 20,
+    borderRadius: 10,
+    borderWidth: 0.3,
+    borderColor: "crimson",
   },
+  
 });
 
 export default AddExpense;
