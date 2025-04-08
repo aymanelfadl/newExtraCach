@@ -1,5 +1,4 @@
 import AddExpense from '../../components/AddExpense';
-import { useState } from 'react';
 
 const Expense = ({ visible, onClose }) => {
   return (

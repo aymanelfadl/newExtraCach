@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState }  from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -7,13 +7,23 @@ const ExpenseForm = ({
   description, 
   setDescription, 
   spends, 
-  setSpends, 
-  showDate,
   suggestions,
+  setSpends, 
+  setSelectedDate,
   onSubmit,
   onClose,
 }) => {
-  
+
+
+  const formatDate = (date) =>{
+    const currentDate = date;
+        const day = currentDate.getDate().toString().padStart(2, '0');
+        const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+        const year = currentDate.getFullYear().toString();
+        return `${year}-${month}-${day}`
+  }
+
+  const [showDate, setShowDate] = useState(false);
 
   const filteredSuggestions = [...new Set(suggestions.filter(item =>
     new RegExp('^' + description.toLowerCase(), 'g').test(item.toLowerCase())
@@ -25,10 +35,36 @@ const ExpenseForm = ({
     </TouchableOpacity>
   );
 
+  const onChangeDate = (event, date) => {
+    if (date) {
+      const formatted = formatDate(date);
+      setSelectedDate(formatted);
+    }
+    setShowDate(false);
+  };
+  
+
   return (
     <View>
       <View style={styles.header}>
         <Text style={styles.title}>Nouvelle Dépense</Text>
+         <View style={styles.mediaContainer}>
+              <TouchableOpacity onPress={() => setShowDate(true)}>
+                    <Icon
+                      name="calendar-plus-o"
+                      color="#333333"
+                      style={{ paddingHorizontal: 10 }}
+                      size={30}
+                    />
+                  </TouchableOpacity>
+                  {showDate && (
+                    <DateTimePicker
+                      testID="dateTimePicker"
+                      value={new Date()}
+                      onChange={onChangeDate}
+                    />
+                  )}
+        </View>
       </View>
       
       <TextInput
