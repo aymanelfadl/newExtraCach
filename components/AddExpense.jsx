@@ -8,7 +8,6 @@ import UploadProgress from "./UploadProgress";
 
 import {
   uploadImage,
-  uploadAudio,
   addExpense,
   fetchExpenseSuggestions,
 } from "../services/FirebaseService";
@@ -88,7 +87,6 @@ const AddExpense = ({ visible, onClose }) => {
       }
       setUploadProgress(1);
       resetForm();
-      onClose();
     } catch (error) {
       console.error("Error adding expense:", error);
     } finally {
