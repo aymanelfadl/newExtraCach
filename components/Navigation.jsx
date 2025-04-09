@@ -27,7 +27,6 @@ export const TabNavigator = () => (
         tabBarIcon: ({ color, size }) => {
           let iconName;
 
-          // Assign icons based on the route name
           if (route.name === 'Accueil') {
             iconName = 'home';
           } else if (route.name === 'Dépenses') {

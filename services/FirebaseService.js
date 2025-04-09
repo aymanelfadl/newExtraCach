@@ -1,46 +1,36 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, onSnapshot, query } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import * as FileSystem from 'expo-file-system';
-import Constants from 'expo-constants';
+import { getAnalytics } from "firebase/analytics";
 
-// Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDczSU5xKWp8VDajyY26tFN2FwrbAPrHyE",
-  authDomain: "expense-manager-376bc.firebaseapp.com",
-  projectId: "expense-manager-376bc",
-  storageBucket: "expense-manager-376bc.appspot.com",
-  messagingSenderId: "281673701772",
-  appId: "1:281673701772:android:ed908eb5788c6409c2dea9"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-
-// Rest of your Firebase service code...
 
 export const uploadImage = async (thumbnail) => {
   try {
     if (!thumbnail) {
-      return 'https://firebasestorage.googleapis.com/v0/b/expenses-manager-65f07.appspot.com/o/depenser-de.png?alt=media&token=f6fb0357-5e9c-471e-b1fe-80e6163fa817';
+      return process.env.DEFAULT_IMAGE_URL || 'https://firebasestorage.googleapis.com/v0/b/expenses-manager-65f07.appspot.com/o/depenser-de.png?alt=media&token=f6fb0357-5e9c-471e-b1fe-80e6163fa817';
     }
     
-    // Get the file name from the URI
     const imageName = 'depense_' + Date.now();
-    
-    // Create a reference to Firebase Storage
     const storageRef = ref(storage, imageName);
     
-    // Convert image URI to blob
     const response = await fetch(thumbnail.uri);
     const blob = await response.blob();
     
-    // Upload blob to Firebase Storage
     await uploadBytes(storageRef, blob);
-    
-    // Get the download URL
     return await getDownloadURL(storageRef);
   } catch (error) {
     console.error('Error uploading image:', error);
@@ -48,38 +38,13 @@ export const uploadImage = async (thumbnail) => {
   }
 };
 
-export const uploadAudio = async (audioFile) => {
-  try {
-    if (!audioFile) {
-      return null;
-    }
-
-    const audioName = 'audio_' + Date.now() + '.m4a';
-    const storageRef = ref(storage, audioName);
-    
-    // Read the file as binary data
-    const fileInfo = await FileSystem.getInfoAsync(audioFile);
-    const response = await fetch(fileInfo.uri);
-    const blob = await response.blob();
-    
-    // Upload to Firebase Storage
-    await uploadBytes(storageRef, blob);
-    
-    // Get the download URL
-    return await getDownloadURL(storageRef);
-  } catch (error) {
-    console.error('Error uploading audio:', error);
-    throw error;
-  }
-};
-
 export const addExpense = async (userId, expense) => {
   try {
-    if (!userId) {
-      console.error('No userId provided');
-      return;
-    }
-    
+    // if (!userId) {
+    //   console.error('No userId provided');
+    //   return;
+    // }
+    userId = 1;
     const expensesRef = collection(db, `Users/${userId}/DepensesCollection`);
     await addDoc(expensesRef, {
       ...expense,
