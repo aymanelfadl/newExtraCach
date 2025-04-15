@@ -6,9 +6,12 @@ import {
   Text, 
   TouchableOpacity,
   Modal,
-  Animated
+  Dimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+// Get screen dimensions
+const { width, height } = Dimensions.get('window');
 
 const CardList = ({ 
   data, 
@@ -18,29 +21,22 @@ const CardList = ({
   onEditPress,
   emptyMessage = "Aucun élément trouvé"
 }) => {
-  const [selectedItemId, setSelectedItemId] = useState(null);
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedItem, setSelectedItem] = useState(null);
 
-  const handleLongPress = (item, event) => {
-    // Get the touch position for placing the menu
-    const { pageX, pageY } = event.nativeEvent;
-    
-    setSelectedItemId(item.id);
+  const handleLongPress = (item) => {
     setSelectedItem(item);
-    setMenuPosition({ x: pageX, y: pageY });
     setActionMenuVisible(true);
   };
 
   const closeActionMenu = () => {
     setActionMenuVisible(false);
-    setSelectedItemId(null);
+    setSelectedItem(null);
   };
 
   const handleDelete = () => {
-    if (onDeletePress && selectedItemId) {
-      onDeletePress(selectedItemId);
+    if (onDeletePress && selectedItem) {
+      onDeletePress(selectedItem.id);
       closeActionMenu();
     }
   };
@@ -57,7 +53,7 @@ const CardList = ({
       <TouchableOpacity 
         style={styles.itemContainer} 
         onPress={() => onCardPress && onCardPress(item)} 
-        onLongPress={(event) => handleLongPress(item, event)}
+        onLongPress={() => handleLongPress(item)}
         delayLongPress={500}
       >
         <Text style={styles.description}>{item.description}</Text>
@@ -95,32 +91,37 @@ const CardList = ({
           activeOpacity={1}
           onPress={closeActionMenu}
         >
-          <View 
-            style={[
-              styles.actionMenu,
-              {
-                left: menuPosition.x - 70, // Adjust these values to position the menu appropriately
-                top: menuPosition.y - 60,
-              }
-            ]}
-          >
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={handleEdit}
-            >
-              <Icon name="pencil" size={24} color="#2196F3" />
-              <Text style={styles.actionText}>Modifier</Text>
-            </TouchableOpacity>
-            
+          <View style={styles.actionMenu}>
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemTitle} numberOfLines={1}>
+                {selectedItem?.description}
+              </Text>
+              <Text style={styles.itemSubtitle}>
+                {selectedItem?.spends} MAD • {selectedItem?.dateAdded}
+              </Text>
+            </View>
+
             <View style={styles.divider} />
-            
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={handleDelete}
-            >
-              <Icon name="delete" size={24} color="crimson" />
-              <Text style={[styles.actionText, {color: 'crimson'}]}>Supprimer</Text>
-            </TouchableOpacity>
+
+            <View style={styles.actionButtons}>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={handleEdit}
+              >
+                <Icon name="pencil" size={24} color="#2196F3" />
+                <Text style={styles.actionText}>Modifier</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.buttonDivider} />
+              
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={handleDelete}
+              >
+                <Icon name="delete" size={24} color="crimson" />
+                <Text style={[styles.actionText, {color: 'crimson'}]}>Supprimer</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -174,16 +175,18 @@ const styles = StyleSheet.create({
     textAlign: "center", 
     padding: 20
   },
+  // Action menu styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionMenu: {
-    position: 'absolute',
     backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 10,
-    width: 140,
+    borderRadius: 20,
+    width: width * 0.8,
+    maxWidth: 300,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -192,22 +195,46 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    overflow: 'hidden',
+  },
+  itemInfo: {
+    padding: 15,
+    backgroundColor: '#f8f8f8',
+  },
+  itemTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 5,
+  },
+  itemSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    justifyContent: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
   },
   actionText: {
-    marginLeft: 10,
+    marginLeft: 8,
     fontWeight: '500',
     color: '#2196F3',
   },
   divider: {
     height: 1,
     backgroundColor: '#e0e0e0',
-    marginVertical: 5,
+  },
+  buttonDivider: {
+    width: 1,
+    backgroundColor: '#e0e0e0',
   }
 });
 
