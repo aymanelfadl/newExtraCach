@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Modal, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 import AddExpense from '../../components/AddExpense';
@@ -88,24 +88,35 @@ const Expense = () => {
     setEditingItem(null);
   };
 
-  const handleAddOrUpdateExpense = (newExpense) => {
+  const handleSaveExpense = (expenseData) => {
     if (editingItem) {
       // Update existing expense
       setExpenses(expenses.map(item => 
-        item.id === editingItem.id ? { ...item, ...newExpense } : item
+        item.id === editingItem.id ? 
+        { 
+          ...item, 
+          description: expenseData.description, 
+          spends: expenseData.spends,
+          dateAdded: expenseData.dateAdded 
+        } : 
+        item
       ));
-      setEditingItem(null);
+      console.log(`Item updated: ${editingItem.id}`);
     } else {
       // Add new expense
-      const expenseToAdd = {
-        id: Date.now().toString(), // Simple ID generation
-        ...newExpense,
-        dateAdded: new Date().toLocaleDateString('fr-FR'),
+      const newExpense = {
+        id: Date.now().toString(),
+        description: expenseData.description,
+        spends: expenseData.spends,
+        dateAdded: expenseData.dateAdded,
         isExpense: true
       };
-      setExpenses([expenseToAdd, ...expenses]);
+      setExpenses([newExpense, ...expenses]);
+      console.log('New expense added');
     }
+    
     setModalVisible(false);
+    setEditingItem(null);
   };
 
   return (
@@ -123,15 +134,13 @@ const Expense = () => {
         <Text style={styles.buttonText}><Icon name="plus" size={40} color="white" /></Text>
       </TouchableOpacity>
       
-      {modalVisible && (
-        <AddExpense 
-          visible={modalVisible} 
-          onClose={handleCloseModal}
-          onSave={handleAddOrUpdateExpense}
-          initialData={editingItem}
-          isEditing={!!editingItem}
-        />
-      )}
+      <AddExpense 
+        visible={modalVisible} 
+        onClose={handleCloseModal}
+        onSave={handleSaveExpense}
+        initialData={editingItem}
+        isEditing={!!editingItem}
+      />
     </View>
   );
 };
