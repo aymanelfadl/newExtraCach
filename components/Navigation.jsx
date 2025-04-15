@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { View, Text, Dimensions } from 'react-native';
 import Home from '../app/screens/Home';
 import Expense from '../app/screens/Expense';
+import Revenue from '../app/screens/Revenue';
 
 const PlaceholderScreen = ({ title }) => (
   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -14,9 +15,8 @@ const PlaceholderScreen = ({ title }) => (
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
 
-// Export TabNavigator WITHOUT NavigationContainer
 export const TabNavigator = ({ route }) => {
-  // You can get userId from route.params if passed as a param
+
   const userId = route?.params?.userId;
   
   return (
@@ -46,7 +46,7 @@ export const TabNavigator = ({ route }) => {
     >
       <Tab.Screen name="Accueil" component={Home} initialParams={{ userId }} />
       <Tab.Screen name="Dépenses" component={Expense} initialParams={{ userId }} />
-      <Tab.Screen name="Revenu" component={() => <PlaceholderScreen title="Revenu" />} />
+      <Tab.Screen name="Revenu" component={Revenue} initialParams={{ userId }} />
       <Tab.Screen name="Employé" component={() => <PlaceholderScreen title="Employé" />} />
       <Tab.Screen name="Analyse" component={() => <PlaceholderScreen title="Analyse" />} />
     </Tab.Navigator>
