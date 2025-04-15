@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
 
 const AddRevenue = ({ visible, onClose, onSave, initialData, isEditing = false }) => {
   const [description, setDescription] = useState('');
@@ -41,7 +42,7 @@ const AddRevenue = ({ visible, onClose, onSave, initialData, isEditing = false }
       setAmount('');
       setDate(new Date());
     }
-  }, [initialData, isEditing]);
+  }, [initialData, isEditing, visible]);
 
   const handleSave = () => {
     if (!description.trim() || !amount.trim()) {
@@ -93,57 +94,73 @@ const AddRevenue = ({ visible, onClose, onSave, initialData, isEditing = false }
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>
-            {isEditing ? 'Modifier le revenu' : 'Ajouter un revenu'}
-          </Text>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {isEditing ? 'Modifier le revenu' : 'Ajouter un revenu'}
+            </Text>
+          </View>
           
-          <TextInput
-            style={styles.input}
-            placeholder="Description"
-            value={description}
-            onChangeText={setDescription}
-          />
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Montant (MAD)"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="numeric"
-          />
-          
-          {/* Date Selection */}
-          <TouchableOpacity 
-            style={styles.dateSelector}
-            onPress={showDatepicker}
-          >
-            <Text style={styles.dateText}>{formattedDate}</Text>
-            <Icon name="calendar" size={24} color="#666" />
-          </TouchableOpacity>
-          
-          {showDatePicker && (
-            <DateTimePicker
-              testID="dateTimePicker"
-              value={date}
-              mode="date"
-              display="default"
-              onChange={onDateChange}
-            />
-          )}
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Description du revenu"
+                placeholderTextColor={colors.textDisabled}
+                value={description}
+                onChangeText={setDescription}
+              />
+            </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Montant (MAD)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0.00"
+                placeholderTextColor={colors.textDisabled}
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="numeric"
+              />
+            </View>
+            
+            {/* Date Selection */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Date</Text>
+              <TouchableOpacity 
+                style={styles.dateSelector}
+                onPress={showDatepicker}
+              >
+                <Text style={styles.dateText}>{formattedDate}</Text>
+                <Icon name="calendar" size={24} color={colors.income} />
+              </TouchableOpacity>
+            </View>
+            
+            {showDatePicker && (
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={date}
+                mode="date"
+                display="default"
+                onChange={onDateChange}
+                accentColor={colors.income}
+              />
+            )}
+          </View>
           
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={onClose}
             >
-              <Text style={styles.buttonText}>Annuler</Text>
+              <Text style={styles.cancelButtonText}>Annuler</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
               style={[styles.button, styles.saveButton]}
               onPress={handleSave}
             >
-              <Text style={styles.buttonText}>
+              <Text style={styles.saveButtonText}>
                 {isEditing ? 'Modifier' : 'Ajouter'}
               </Text>
             </TouchableOpacity>
@@ -162,74 +179,97 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalView: {
-    width: '80%',
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
+    width: '85%',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.extraLarge,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    ...shadows.large,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    width: '100%',
+    backgroundColor: colors.income,
+    paddingVertical: spacing.medium,
+    paddingHorizontal: spacing.large,
+    alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#000',
+    fontSize: typography.sizeLarge,
+    fontWeight: typography.weightBold,
+    color: colors.card,
+  },
+  formContainer: {
+    width: '100%',
+    padding: spacing.large,
+  },
+  inputGroup: {
+    marginBottom: spacing.medium,
+  },
+  inputLabel: {
+    fontSize: typography.sizeRegular,
+    fontWeight: typography.weightMedium,
+    color: colors.textSecondary,
+    marginBottom: spacing.tiny,
+    paddingLeft: spacing.tiny,
   },
   input: {
     width: '100%',
     height: 50,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    marginBottom: 15,
-    paddingHorizontal: 10,
-    color: '#000',
+    borderColor: colors.divider,
+    borderRadius: borderRadius.medium,
+    paddingHorizontal: spacing.medium,
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
+    fontSize: typography.sizeRegular,
   },
   dateSelector: {
     width: '100%',
     height: 50,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    marginBottom: 15,
-    paddingHorizontal: 10,
+    borderColor: colors.divider,
+    borderRadius: borderRadius.medium,
+    paddingHorizontal: spacing.medium,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: colors.background,
   },
   dateText: {
-    color: '#000',
-    fontSize: 16,
+    color: colors.textPrimary,
+    fontSize: typography.sizeRegular,
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
+    padding: spacing.medium,
+    backgroundColor: colors.background,
   },
   button: {
-    borderRadius: 10,
-    padding: 10,
-    elevation: 2,
-    minWidth: 100,
+    borderRadius: borderRadius.medium,
+    padding: spacing.medium,
+    minWidth: 120,
     alignItems: 'center',
+    ...shadows.small,
   },
   saveButton: {
-    backgroundColor: '#4CAF50', // Green for revenue
+    backgroundColor: colors.income,
   },
   cancelButton: {
-    backgroundColor: '#f44336',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.income,
   },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
+  saveButtonText: {
+    color: colors.card,
+    fontWeight: typography.weightBold,
+    fontSize: typography.sizeMedium,
+  },
+  cancelButtonText: {
+    color: colors.income,
+    fontWeight: typography.weightBold,
+    fontSize: typography.sizeMedium,
   },
 });
 

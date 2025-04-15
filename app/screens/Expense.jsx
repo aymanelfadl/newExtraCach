@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { colors, spacing, borderRadius, shadows, commonStyles } from '../../styles/theme';
 
 import AddExpense from '../../components/AddExpense';
 import Header from '../../components/Header';
@@ -130,8 +131,8 @@ const Expense = () => {
         emptyMessage="Aucun dépenses trouvé"
       />
       
-      <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
-        <Text style={styles.buttonText}><Icon name="plus" size={40} color="white" /></Text>
+      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+        <Icon name="plus" size={30} color={colors.card} />
       </TouchableOpacity>
       
       <AddExpense 
@@ -147,26 +148,19 @@ const Expense = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    position: 'relative',
-    margin: 0,
-    backgroundColor: 'rgb(249 250 251)',
+    ...commonStyles.container,
   },
-  button: {
+  addButton: {
     position: 'absolute',
-    bottom: 30,
-    right: 20,
-    backgroundColor: 'crimson',
+    bottom: spacing.large,
+    right: spacing.large,
+    backgroundColor: colors.expense,
     width: 60,
     height: 60,
-    borderRadius: 25,
+    borderRadius: borderRadius.round,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 5
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 50,
+    ...shadows.large,
   },
 });
 

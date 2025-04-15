@@ -1,79 +1,63 @@
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { typography, spacing, borderRadius, shadows } from '../styles/theme';
 
 export const HomeButton = ({ btnData }) => {
+  const { title, description, onPress, backgroundColor, icon } = btnData;
+
   return (
-    <View>
-      <View style={styles.titleContainer}>
-        <Text style={[styles.title, { color: btnData.backgroundColor }]}> 
-          {btnData.title}
-        </Text>
-        <View
-          style={[styles.line, { backgroundColor: btnData.backgroundColor }]}
-        ></View>
-      </View>
-      <TouchableOpacity
-        style={[styles.itemContainer, { backgroundColor: btnData.backgroundColor }]}
-        onPress={btnData.onPress}
-      >
+    <TouchableOpacity
+      style={[styles.button, { backgroundColor }]}
+      onPress={onPress}
+      activeOpacity={0.9}
+    >
+      <View style={styles.contentContainer}>
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.description}>{description}</Text>
+        </View>
+        
         <View style={styles.iconContainer}>
-          <Icon name={btnData.icon} size={30} color="white" />
+          <Icon name={icon} size={28} color="white" />
         </View>
-        <View style={styles.descriptionContainer}>
-          <Text style={styles.description}>{btnData.description}</Text>
-        </View>
-      </TouchableOpacity>
-    </View>
+      </View>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  itemContainer: {
-    borderRadius: 40,
-    borderColor: "#ccc",
-    alignSelf: "center",
-    alignItems: "center",
-    shadowColor: "gray",
-    flexDirection: "row",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 6,
-    padding: 15,
-    marginVertical: 30,
-    width: "80%",
+  button: {
+    borderRadius: borderRadius.large,
+    marginVertical: spacing.medium,
+    paddingVertical: spacing.medium,
+    paddingHorizontal: spacing.large,
+    ...shadows.medium,
   },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  textContainer: {
+    flex: 1,
+    paddingRight: spacing.medium,
   },
   title: {
-    color: "black",
-    fontSize: 18,
-    fontWeight: "600",
-    marginRight: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-  },
-  line: {
-    flex: 1,
-    height: 2,
-  },
-  iconContainer: {
-    marginRight: 10,
-    borderRadius: 100,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    padding: 10,
-  },
-  descriptionContainer: {
-    flex: 1,
-    marginLeft: 4,
+    color: 'white',
+    fontSize: typography.sizeLarge,
+    fontWeight: typography.weightBold,
+    marginBottom: spacing.tiny,
   },
   description: {
-    fontSize: 16,
-    color: "white",
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: typography.sizeRegular,
   },
+  iconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: borderRadius.round,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });

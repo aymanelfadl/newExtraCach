@@ -1,54 +1,68 @@
 import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { View, Text, Dimensions } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
 import Home from '../app/screens/Home';
 import Expense from '../app/screens/Expense';
 import Revenue from '../app/screens/Revenue';
 
-const PlaceholderScreen = ({ title }) => (
-  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-    <Text style={{ fontSize: 24 }}>{title}</Text>
-  </View>
-);
+import { colors, typography, shadows } from '../styles/theme';
 
 const Tab = createBottomTabNavigator();
-const { width } = Dimensions.get('window');
 
-export const TabNavigator = ({ route }) => {
-
-  const userId = route?.params?.userId;
-  
+export const TabNavigator = () => {
   return (
     <Tab.Navigator
-      initialRouteName="Accueil"
-      screenOptions={({ route }) => ({
-        tabBarActiveTintColor: 'crimson',
-        tabBarInactiveTintColor: 'gray',
-        tabBarStyle: {
-          display: 'flex',
-          height: 50,
-        },
-        tabBarIcon: ({ color, size }) => {
-          let iconName;
-
-          if (route.name === 'Accueil') iconName = 'home';
-          else if (route.name === 'Dépenses') iconName = 'credit-card';
-          else if (route.name === 'Revenu') iconName = 'currency-usd';
-          else if (route.name === 'Employé') iconName = 'account';
-          else if (route.name === 'Analyse') iconName = 'chart-line';
-
-          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarLabel: ({ focused }) => width >= 300 ? route.name : null,
+      screenOptions={{
         headerShown: false,
-      })}
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
+        tabBarStyle: {
+          backgroundColor: colors.tabBar,
+          height: 60,
+          paddingBottom: 10,
+          paddingTop: 5,
+          ...shadows.medium,
+        },
+        tabBarLabelStyle: {
+          fontSize: typography.sizeXSmall,
+          fontWeight: typography.weightSemiBold,
+        },
+      }}
     >
-      <Tab.Screen name="Accueil" component={Home} initialParams={{ userId }} />
-      <Tab.Screen name="Dépenses" component={Expense} initialParams={{ userId }} />
-      <Tab.Screen name="Revenu" component={Revenue} initialParams={{ userId }} />
-      <Tab.Screen name="Employé" component={() => <PlaceholderScreen title="Employé" />} />
-      <Tab.Screen name="Analyse" component={() => <PlaceholderScreen title="Analyse" />} />
+      <Tab.Screen
+        name="Home"
+        component={Home}
+        options={{
+          tabBarLabel: 'Accueil',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="home" color={color} size={size} />
+          ),
+        }}
+      />
+      
+      <Tab.Screen
+        name="Expense"
+        component={Expense}
+        options={{
+          tabBarLabel: 'Dépenses',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="cash-minus" color={color} size={size} />
+          ),
+        }}
+      />
+      
+      <Tab.Screen
+        name="Revenue"
+        component={Revenue}
+        options={{
+          tabBarLabel: 'Revenus',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="cash-plus" color={color} size={size} />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 };

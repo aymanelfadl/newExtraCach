@@ -1,11 +1,13 @@
 // App.jsx - Main entry point
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { StatusBar } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import SplashScreen from './screens/SplashScreen';
 import LogIn from './screens/LogIn';
 import { TabNavigator } from '../components/Navigation'; 
+import { colors } from '../styles/theme';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,6 +23,12 @@ const App = () => {
   }, []);
 
   return (
+    <SafeAreaProvider>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={colors.background}
+        translucent={false}
+      />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {/* {isLoading ? (
           <Stack.Screen name="Splash" component={SplashScreen} />
@@ -32,6 +40,7 @@ const App = () => {
           <Stack.Screen name="MainTabs" component={TabNavigator} />
         {/* // )}  */}
       </Stack.Navigator>
+    </SafeAreaProvider>
   );
 };
 

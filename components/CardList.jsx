@@ -9,6 +9,7 @@ import {
   Dimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
 
 // Get screen dimensions
 const { width, height } = Dimensions.get('window');
@@ -49,6 +50,10 @@ const CardList = ({
   };
 
   const renderItem = ({ item }) => {
+    // Determine color based on transaction type
+    const amountColor = item.isExpense ? colors.expense : colors.income;
+    const amountPrefix = item.isExpense ? '-' : '+';
+
     return (
       <TouchableOpacity 
         style={styles.itemContainer} 
@@ -56,9 +61,9 @@ const CardList = ({
         onLongPress={() => handleLongPress(item)}
         delayLongPress={500}
       >
-        <Text style={styles.description}>{item.description}</Text>
-        <Text style={styles.amount}>
-          <Text style={{ fontWeight: "bold" }}>{item.isExpense ? '-' : '+'}</Text>
+        <Text style={styles.description} numberOfLines={1}>{item.description}</Text>
+        <Text style={[styles.amount, { color: amountColor }]}>
+          <Text style={{ fontWeight: typography.weightBold }}>{amountPrefix}</Text>
           {item.spends || item.amount} MAD
         </Text>
         <Text style={styles.dateAdded}>{item.dateAdded}</Text>
@@ -74,8 +79,12 @@ const CardList = ({
         keyExtractor={(item) => item.id?.toString()}
         numColumns={numColumns}
         columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : null}
+        contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
-          <Text style={styles.emptyMessage}>{emptyMessage}</Text>
+          <View style={styles.emptyContainer}>
+            <Icon name="currency-usd-off" size={50} color={colors.textDisabled} />
+            <Text style={styles.emptyMessage}>{emptyMessage}</Text>
+          </View>
         }
       />
 
@@ -97,7 +106,7 @@ const CardList = ({
                 {selectedItem?.description}
               </Text>
               <Text style={styles.itemSubtitle}>
-                {selectedItem?.spends} MAD • {selectedItem?.dateAdded}
+                {selectedItem?.isExpense ? '-' : '+'}{selectedItem?.spends} MAD • {selectedItem?.dateAdded}
               </Text>
             </View>
 
@@ -108,7 +117,7 @@ const CardList = ({
                 style={styles.actionButton}
                 onPress={handleEdit}
               >
-                <Icon name="pencil" size={24} color="#2196F3" />
+                <Icon name="pencil" size={24} color={colors.info} />
                 <Text style={styles.actionText}>Modifier</Text>
               </TouchableOpacity>
               
@@ -118,8 +127,8 @@ const CardList = ({
                 style={styles.actionButton}
                 onPress={handleDelete}
               >
-                <Icon name="delete" size={24} color="crimson" />
-                <Text style={[styles.actionText, {color: 'crimson'}]}>Supprimer</Text>
+                <Icon name="delete" size={24} color={colors.error} />
+                <Text style={[styles.actionText, {color: colors.error}]}>Supprimer</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -132,48 +141,52 @@ const CardList = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
   },
-  itemContainer: {
-    flex: 1,
-    margin: 8,
-    borderRadius: 30,
-    borderColor: '#ccc',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-    backgroundColor: 'white',
-    shadowColor: 'gray',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 6,
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: "#000",
-    marginBottom: 5,
-  },
-  amount: {
-    color: "#000",
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  dateAdded: {
-    fontSize: 12,
-    color: '#666',
+  listContainer: {
+    padding: spacing.small,
+    paddingBottom: spacing.extraLarge,
   },
   columnWrapper: {
     justifyContent: 'space-between',
   },
+  itemContainer: {
+    flex: 1,
+    margin: spacing.small,
+    borderRadius: borderRadius.large,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.medium,
+    backgroundColor: colors.card,
+    ...shadows.medium,
+    marginBottom: spacing.small,
+  },
+  description: {
+    fontSize: typography.sizeMedium,
+    fontWeight: typography.weightSemiBold,
+    color: colors.textPrimary,
+    marginBottom: spacing.tiny,
+    textAlign: 'center',
+  },
+  amount: {
+    fontSize: typography.sizeRegular,
+    marginBottom: spacing.tiny,
+    fontWeight: typography.weightMedium,
+  },
+  dateAdded: {
+    fontSize: typography.sizeSmall,
+    color: colors.textSecondary,
+  },
+  emptyContainer: {
+    padding: spacing.large,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyMessage: {
-    color: "gray", 
+    color: colors.textSecondary, 
     textAlign: "center", 
-    padding: 20
+    marginTop: spacing.medium,
+    fontSize: typography.sizeRegular,
   },
   // Action menu styles
   modalOverlay: {
@@ -183,33 +196,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionMenu: {
-    backgroundColor: 'white',
-    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.large,
     width: width * 0.8,
     maxWidth: 300,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    ...shadows.large,
     overflow: 'hidden',
   },
   itemInfo: {
-    padding: 15,
-    backgroundColor: '#f8f8f8',
+    padding: spacing.medium,
+    backgroundColor: colors.background,
   },
   itemTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 5,
+    fontSize: typography.sizeMedium,
+    fontWeight: typography.weightSemiBold,
+    color: colors.textPrimary,
+    marginBottom: spacing.tiny,
   },
   itemSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.sizeRegular,
+    color: colors.textSecondary,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -220,21 +226,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
+    paddingVertical: spacing.medium,
+    paddingHorizontal: spacing.small,
   },
   actionText: {
-    marginLeft: 8,
-    fontWeight: '500',
-    color: '#2196F3',
+    marginLeft: spacing.small,
+    fontWeight: typography.weightMedium,
+    color: colors.info,
+    fontSize: typography.sizeRegular,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.divider,
   },
   buttonDivider: {
     width: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.divider,
   }
 });
 

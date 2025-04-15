@@ -1,106 +1,97 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Dimensions, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { useState } from 'react';
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
 
-const Header = ({ screenName, onSearch }) => {
-  const [openSearch, setOpenSearch] = useState(false);
-  const [searchText, setSearchText] = useState('');
+const Header = ({ screenName, onSearching }) => {
+  const [searching, setSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSearch = () => {
-    if (onSearch && searchText.trim().length > 0) {
-      onSearch(searchText);
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    if (onSearching) {
+      onSearching(query);
     }
   };
 
   const toggleSearch = () => {
-    setOpenSearch(!openSearch);
-    if (openSearch) {
-      setSearchText('');
+    if (searching && searchQuery) {
+      setSearchQuery('');
+      if (onSearching) {
+        onSearching('');
+      }
     }
+    setSearching(!searching);
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>{screenName}</Text>
-        <TouchableOpacity onPress={toggleSearch} style={styles.searchButton}>
-          <Ionicons name={openSearch ? "close" : "search"} size={22} color="crimson" />
-        </TouchableOpacity>
-      </View>
-      
-      {openSearch && (
+    <View style={styles.header}>
+      {searching ? (
         <View style={styles.searchContainer}>
+          <Icon name="magnify" size={24} color={colors.primary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search..."
-            placeholderTextColor="#999"
-            value={searchText}
-            onChangeText={setSearchText}
-            onSubmitEditing={handleSearch}
+            placeholder="Rechercher..."
+            value={searchQuery}
+            onChangeText={handleSearch}
+            autoFocus
           />
-          <TouchableOpacity onPress={handleSearch} style={styles.searchIcon}>
-            <Ionicons name="send" size={18} color="crimson" />
+          <TouchableOpacity onPress={toggleSearch}>
+            <Icon name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>{screenName}</Text>
+          {onSearching && (
+            <TouchableOpacity onPress={toggleSearch} style={styles.searchButton}>
+              <Icon name="magnify" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
   );
 };
 
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
-  container: {
-    zIndex: 1000,
-    backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 3,
-    elevation: 5,
-    marginBottom: 8,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
+  header: {
+    backgroundColor: colors.card,
+    paddingTop: spacing.extraLarge,
+    paddingBottom: spacing.medium,
+    paddingHorizontal: spacing.medium,
+    ...shadows.small,
   },
   titleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 10,
-    paddingHorizontal: width * 0.05,
+    alignItems: 'center',
   },
   title: {
-    fontSize: width > 400 ? 20 : 18,
-    color: 'crimson',
-    fontWeight: '100',
+    fontSize: typography.sizeXLarge,
+    fontWeight: typography.weightBold,
+    color: colors.primary,
   },
   searchButton: {
-    padding: 4,
+    padding: spacing.small,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
-    paddingHorizontal: width * 0.05,
-    marginBottom: 8,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.medium,
+    paddingHorizontal: spacing.medium,
+    height: 50,
+    ...shadows.small,
+  },
+  searchIcon: {
+    marginRight: spacing.small,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'crimson',
-    color: 'black',
+    fontSize: typography.sizeRegular,
+    color: colors.textPrimary,
   },
-  searchIcon: {
-    padding: 6,
-    marginLeft: 6,
-  }
 });
 
 export default Header;
