@@ -30,7 +30,7 @@ const App = () => {
           </Stack.Screen>
         ) : ( */}
           <Stack.Screen name="MainTabs" component={TabNavigator} />
-        {/* )} */}
+        {/* // )}  */}
       </Stack.Navigator>
   );
 };

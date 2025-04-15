@@ -1,206 +1,153 @@
-import React, { useState, useEffect } from "react";
-import { View, Modal, StyleSheet} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useState, useEffect } from 'react';
+import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 
+const AddExpense = ({ visible, onClose, onSave, initialData, isEditing = false }) => {
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
 
-import ExpenseForm from "./ExpenseForm";
-import UploadProgress from "./UploadProgress";
-
-import {
-  uploadImage,
-  addExpense,
-  fetchExpenseSuggestions,
-} from "../services/FirebaseService";
-
-const AddExpense = ({ visible, onClose }) => {
-
-  const formatDate = (date) =>{
-    const currentDate = date;
-        const day = currentDate.getDate().toString().padStart(2, '0');
-        const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-        const year = currentDate.getFullYear().toString();
-        return `${year}-${month}-${day}`
-  }
-  const [description, setDescription] = useState("");
-  const [spends, setSpends] = useState("");
-  const [thumbnail, setThumbnail] = useState(null);
-  const [uploadType, setUploadType] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [suggestions, setSuggestions] = useState([]);
-  const [userId, setUserId] = useState(null);
-
+  // Initialize form with data when editing
   useEffect(() => {
-    const getUserId = async () => {
-      try {
-        const storedUserId = await AsyncStorage.getItem("userId");
-        if (storedUserId !== null) {
-          setUserId(storedUserId);
-        }
-      } catch (error) {
-        console.error("Error retrieving user ID from local storage:", error);
-      }
-    };
+    if (isEditing && initialData) {
+      setDescription(initialData.description || '');
+      setAmount(initialData.spends?.toString() || '');
+    } else {
+      // Reset form when adding new
+      setDescription('');
+      setAmount('');
+    }
+  }, [initialData, isEditing]);
 
-    getUserId();
-  }, []);
-
-  useEffect(() => {
-    let unsubscribe;
-
-    if (userId) {
-      unsubscribe = fetchExpenseSuggestions(userId, (fetchedSuggestions) => {
-        setSuggestions(fetchedSuggestions);
-      });
+  const handleSave = () => {
+    if (!description.trim() || !amount.trim()) {
+      // Validation: Both fields are required
+      return;
     }
 
-    return () => {
-      if (unsubscribe) unsubscribe();
+    const expenseData = {
+      description: description.trim(),
+      spends: parseFloat(amount.trim()),
     };
-  }, [userId]);
 
-  const handleAddExpense = async () => {
-    setIsUploading(true);
-    const defaultName = "Depense " + formatDate(new Date());
-    let finalDescription = description.trim() === "" ? defaultName : description;
-
-    try {
-      setUploadProgress(0);
-      if (spends === "") {
-        alert("Please enter a valid amount");
-      }
-      else
-      {
-        let mediaUrl;
-        if (uploadType === "image" || uploadType === null) {
-          mediaUrl = await uploadImage(thumbnail);
-        }
-        setUploadProgress(0.5);
-        await addExpense(userId, {
-          description: finalDescription,
-          thumbnail: mediaUrl,
-          thumbnailType: uploadType === null ? "image" : uploadType,
-          spends: spends,
-          dateAdded: selectedDate,
-        });
-      }
-      setUploadProgress(1);
-      resetForm();
-    } catch (error) {
-      console.error("Error adding expense:", error);
-    } finally {
-      setIsUploading(false);
-    }
+    onSave(expenseData);
+    resetForm();
   };
 
   const resetForm = () => {
-    setDescription("");
-    setSpends("");
-    setThumbnail(null);
-    setUploadType(null);
-    setSelectedDate(formatDate(new Date()));
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  const renderModalContent = () => {
-    return (
-      <View style={styles.modalContent}>
-      <ExpenseForm
-        description={description}
-        setDescription={setDescription}
-        spends={spends}
-        setSpends={setSpends}
-        suggestions={suggestions}
-        onSubmit={handleAddExpense}
-        onClose={handleClose}
-        selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
-      />
-
-      </View>
-    );
+    setDescription('');
+    setAmount('');
   };
 
   return (
-    <>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={visible && !isUploading}
-        onRequestClose={onClose}
-      >
-        <View style={styles.modalContainer}>{renderModalContent()}</View>
-      </Modal>
-
-      <UploadProgress
-        isUploading={isUploading}
-        uploadProgress={uploadProgress}
-      />
-    </>
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.centeredView}>
+        <View style={styles.modalView}>
+          <Text style={styles.modalTitle}>
+            {isEditing ? 'Modifier la dépense' : 'Ajouter une dépense'}
+          </Text>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Description"
+            value={description}
+            onChangeText={setDescription}
+          />
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Montant (MAD)"
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="numeric"
+          />
+          
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={onClose}
+            >
+              <Text style={styles.buttonText}>Annuler</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.button, styles.saveButton]}
+              onPress={handleSave}
+            >
+              <Text style={styles.buttonText}>
+                {isEditing ? 'Modifier' : 'Ajouter'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  modalContainer: {
+  centeredView: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 40,
-    paddingVertical: 30,
-    borderRadius: 30,
-    width: "80%",
-    shadowColor: "crimson",
+  modalView: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 1,
-    elevation: 3,
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  mediaContainer: {
-    flexDirection: "row",
-    alignSelf: "center",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginVertical: 10,
-    padding: 20,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#000',
+  },
+  input: {
+    width: '100%',
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#ccc',
     borderRadius: 10,
-    borderWidth: 0.3,
-    borderColor: "crimson",
+    marginBottom: 15,
+    paddingHorizontal: 10,
+    color: '#000',
   },
-  btn: {
-    backgroundColor: "rgb(14 165 233)",
-    padding: 13,
-    marginTop: 15,
-    borderRadius: 100,
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
   },
-  btnText: {
-    color: "#fff",
-    textAlign: "center",
+  button: {
+    borderRadius: 10,
+    padding: 10,
+    elevation: 2,
+    minWidth: 100,
+    alignItems: 'center',
   },
-  closeButton: {
-    backgroundColor: "crimson",
-    padding: 8,
-    borderRadius: 100,
+  saveButton: {
+    backgroundColor: '#2196F3',
   },
-  closeButtonText: {
-    color: "#fff",
-    textAlign: "center",
+  cancelButton: {
+    backgroundColor: '#f44336',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 
