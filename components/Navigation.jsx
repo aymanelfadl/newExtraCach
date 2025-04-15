@@ -1,5 +1,4 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -16,10 +15,10 @@ export const TabNavigator = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.tabBarActive,
-        tabBarInactiveTintColor: colors.tabBarInactive,
+        tabBarActiveTintColor: colors.tabBarActive || colors.primary,
+        tabBarInactiveTintColor: colors.tabBarInactive || colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: colors.tabBar,
+          backgroundColor: colors.tabBar || colors.card,
           height: 60,
           paddingBottom: 10,
           paddingTop: 5,

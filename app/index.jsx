@@ -1,27 +1,44 @@
-// App.jsx - Main entry point
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import SplashScreen from './screens/SplashScreen';
+import { TabNavigator } from '../components/Navigation';
 import LogIn from './screens/LogIn';
-import { TabNavigator } from '../components/Navigation'; 
+import SplashScreen from './screens/SplashScreen';
 import { colors } from '../styles/theme';
+import { UserProvider, useUser } from '../context/UserContext';
 
 const Stack = createNativeStackNavigator();
 
-const App = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState(null); 
-
+const AppNavigator = () => {
+  const { user, loading } = useUser();
+  const [isInitializing, setIsInitializing] = useState(true);
+  
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsLoading(false);
+      setIsInitializing(false);
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
+  
+  if (loading || isInitializing) {
+    return <SplashScreen />;
+  }
+  
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {!user ? (
+        <Stack.Screen name="LogIn" component={LogIn} />
+      ) : (
+        <Stack.Screen name="MainTabs" component={TabNavigator} />
+      )}
+    </Stack.Navigator>
+  );
+};
 
+export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar
@@ -29,19 +46,9 @@ const App = () => {
         backgroundColor={colors.background}
         translucent={false}
       />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* {isLoading ? (
-          <Stack.Screen name="Splash" component={SplashScreen} />
-        ) : !userId ? (
-          <Stack.Screen name="LogIn">
-            {() => <LogIn onLogin={(uid) => setUserId(uid)} />}
-          </Stack.Screen>
-        ) : ( */}
-          <Stack.Screen name="MainTabs" component={TabNavigator} />
-        {/* // )}  */}
-      </Stack.Navigator>
+      <UserProvider>
+        <AppNavigator />
+      </UserProvider>
     </SafeAreaProvider>
   );
-};
-
-export default App;
+}
