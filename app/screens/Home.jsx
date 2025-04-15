@@ -11,6 +11,14 @@ const Home = () => {
   const [expenseModalVisible, setExpenseModalVisible] = useState(false);
   const [revenueModalVisible, setRevenueModalVisible] = useState(false);
   
+  // Current date formatting
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+  
   // Mock data for recent transactions
   const [recentTransactions, setRecentTransactions] = useState([
     {
@@ -47,24 +55,24 @@ const Home = () => {
     },
   ]);
 
-  const DataBtns = [
+  const quickActionBtns = [
     { 
-      title: "Nouvelle Dépense",
-      description: "Enregistrer une nouvelle dépense", 
+      title: "Dépense",
+      description: "Nouvelle dépense", 
       onPress: () => setExpenseModalVisible(true),
       backgroundColor: colors.expense,
       icon: "cash-minus" 
     },
     { 
-      title: "Nouveau Revenu", 
-      description: "Enregistrer un nouveau revenu",
+      title: "Revenu", 
+      description: "Nouveau revenu",
       onPress: () => setRevenueModalVisible(true),
       backgroundColor: colors.income,
       icon: "cash-plus" 
     },
     {
-      title: "Dépense pour Employé", 
-      description: "Enregistrer une dépense pour un employé",
+      title: "Employé", 
+      description: "Dép. employé",
       onPress: () => alert("Dépense pour Employé"),
       backgroundColor: colors.primary,
       icon: "account-cash" 
@@ -125,7 +133,7 @@ const Home = () => {
       >
         {/* Today's summary card */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Aujourd'hui - {todayDate}</Text>
+          <Text style={styles.summaryTitle}>Aujourd'hui - {formattedDate}</Text>
           <View style={styles.summaryContent}>
             <View style={styles.summaryItem}>
               <Icon name="arrow-down-bold-circle" size={24} color={colors.income} />
@@ -161,10 +169,10 @@ const Home = () => {
           </View>
         </View>
         
-        {/* Quick action buttons */}
+        {/* Modern Quick Action Buttons */}
         <Text style={styles.sectionTitle}>Actions rapides</Text>
         <View style={styles.quickActionsContainer}>
-          {DataBtns.map((btn, index) => (
+          {quickActionBtns.map((btn, index) => (
             <HomeButton key={index} btnData={btn} compact={true} /> 
           ))}
         </View>
@@ -172,14 +180,18 @@ const Home = () => {
         {/* Recent transactions */}
         <View style={styles.recentTransactionsHeader}>
           <Text style={styles.sectionTitle}>Transactions récentes</Text>
-          <TouchableOpacity onPress={() => {}}>
+          <TouchableOpacity onPress={() => {}} style={styles.viewAllButton}>
             <Text style={styles.viewAllText}>Voir tout</Text>
+            <Icon name="chevron-right" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
         
         <View style={styles.transactionsList}>
           {recentTransactions.map((transaction, index) => (
-            <View key={transaction.id} style={styles.transactionItem}>
+            <View key={transaction.id} style={[
+              styles.transactionItem,
+              index === recentTransactions.length - 1 ? styles.lastTransactionItem : null
+            ]}>
               <View style={[
                 styles.transactionIconContainer, 
                 {backgroundColor: transaction.isExpense ? colors.expense : colors.income}
@@ -208,6 +220,11 @@ const Home = () => {
               </Text>
             </View>
           ))}
+        </View>
+        
+        {/* User info */}
+        <View style={styles.userInfo}>
+          <Text style={styles.userInfoText}>Connecté en tant que <Text style={styles.username}>aymanelfadl</Text></Text>
         </View>
       </ScrollView>
       
@@ -286,7 +303,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.medium,
   },
   quickActionsContainer: {
-    marginBottom: spacing.medium,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: spacing.large,
+    paddingHorizontal: spacing.medium,
   },
   recentTransactionsHeader: {
     flexDirection: 'row',
@@ -294,15 +314,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.small,
   },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   viewAllText: {
     color: colors.primary,
     fontWeight: typography.weightSemiBold,
+    marginRight: spacing.tiny,
   },
   transactionsList: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.large,
     ...shadows.medium,
     overflow: 'hidden',
+    marginBottom: spacing.large,
   },
   transactionItem: {
     flexDirection: 'row',
@@ -310,6 +336,9 @@ const styles = StyleSheet.create({
     padding: spacing.medium,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
+  },
+  lastTransactionItem: {
+    borderBottomWidth: 0,
   },
   transactionIconContainer: {
     width: 40,
@@ -336,6 +365,18 @@ const styles = StyleSheet.create({
     fontSize: typography.sizeRegular,
     fontWeight: typography.weightBold,
   },
+  userInfo: {
+    alignItems: 'center',
+    marginTop: spacing.medium,
+  },
+  userInfoText: {
+    fontSize: typography.sizeSmall,
+    color: colors.textSecondary,
+  },
+  username: {
+    fontWeight: typography.weightBold,
+    color: colors.primary,
+  }
 });
 
 export default Home;

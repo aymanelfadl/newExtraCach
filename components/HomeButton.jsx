@@ -1,25 +1,23 @@
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { typography, spacing, borderRadius, shadows } from '../styles/theme';
+import { typography, spacing, borderRadius, shadows, colors } from '../styles/theme';
 
 export const HomeButton = ({ btnData, compact = false }) => {
   const { title, description, onPress, backgroundColor, icon } = btnData;
 
-  // Use compact style if compact prop is true
+  // Modern circular style if compact prop is true
   if (compact) {
     return (
-      <TouchableOpacity
-        style={[styles.compactButton, { backgroundColor }]}
-        onPress={onPress}
-        activeOpacity={0.9}
-      >
-        <View style={styles.compactIconContainer}>
-          <Icon name={icon} size={24} color="white" />
-        </View>
-        <View style={styles.compactTextContainer}>
-          <Text style={styles.compactTitle}>{title}</Text>
-        </View>
-      </TouchableOpacity>
+      <View style={styles.circleButtonWrapper}>
+        <TouchableOpacity
+          style={[styles.circleButton, { backgroundColor }]}
+          onPress={onPress}
+          activeOpacity={0.9}
+        >
+          <Icon name={icon} size={28} color="white" />
+        </TouchableOpacity>
+        <Text style={styles.circleButtonLabel}>{title}</Text>
+      </View>
     );
   }
 
@@ -81,25 +79,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  // Compact button styles
-  compactButton: {
-    borderRadius: borderRadius.large,
-    marginBottom: spacing.medium,
-    paddingVertical: spacing.medium,
-    paddingHorizontal: spacing.medium,
-    ...shadows.medium,
-    flexDirection: 'row',
+  // Modern circle button styles
+  circleButtonWrapper: {
     alignItems: 'center',
+    width: 88,
   },
-  compactIconContainer: {
-    marginRight: spacing.small,
+  circleButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.medium,
+    marginBottom: spacing.small,
   },
-  compactTextContainer: {
-    flex: 1,
-  },
-  compactTitle: {
-    color: 'white',
-    fontSize: typography.sizeRegular,
-    fontWeight: typography.weightBold,
+  circleButtonLabel: {
+    fontSize: typography.sizeSmall,
+    fontWeight: typography.weightSemiBold,
+    color: colors.textPrimary,
+    textAlign: 'center',
   },
 });
