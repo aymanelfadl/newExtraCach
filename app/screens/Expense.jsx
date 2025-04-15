@@ -71,7 +71,7 @@ const Expense = () => {
           text: "Supprimer", 
           onPress: () => {
             setExpenses(expenses.filter(item => item.id !== id));
-            console.log(`Item deleted: ${id}`);
+            console.log(`Item deleted: ${description}`);
           },
           style: "destructive"
         }
@@ -91,7 +91,6 @@ const Expense = () => {
 
   const handleSaveExpense = (expenseData) => {
     if (editingItem) {
-      // Update existing expense
       setExpenses(expenses.map(item => 
         item.id === editingItem.id ? 
         { 
@@ -104,7 +103,6 @@ const Expense = () => {
       ));
       console.log(`Item updated: ${editingItem.id}`);
     } else {
-      // Add new expense
       const newExpense = {
         id: Date.now().toString(),
         description: expenseData.description,
