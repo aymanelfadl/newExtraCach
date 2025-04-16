@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -11,10 +11,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Import your services!
 import { userService, authService } from '../../services/index';
+import { useUser } from '../../context/UserContext';
 
-const Settings = ({ viewingAsUser, setViewingAsUser }) => {
+const Settings = () => {
+  const { setViewingAsUser, viewingAs } = useUser();
   const navigation = useNavigation();
   const [availableUsers, setAvailableUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -28,19 +29,18 @@ const Settings = ({ viewingAsUser, setViewingAsUser }) => {
       }
       setCurrentUser(user);
       const result = await userService.getUsersWithSharedAccess();
-      console.log('Available users:', result.users);
       setAvailableUsers(result.users); 
     };
     loadData();
   }, []);
 
   const handleUserSwitch = async (user) => {
-    setViewingAsUser(user);
+    await setViewingAsUser(user);
     Alert.alert("Compte utilisateur changé", `Vous consultez maintenant le compte de ${user.fullName}`);
   };
 
-  const handleReturnToMyAccount = () => {
-    setViewingAsUser(null);
+  const handleReturnToMyAccount = async () => {
+    await setViewingAsUser(null);
     Alert.alert("Retour à votre compte", "Vous consultez maintenant votre propre compte");
   };
 
@@ -70,12 +70,12 @@ const Settings = ({ viewingAsUser, setViewingAsUser }) => {
           <TouchableOpacity
             style={[
               styles.userItem,
-              !viewingAsUser && styles.activeUserItem
+              !viewingAs && styles.activeUserItem
             ]}
             onPress={handleReturnToMyAccount}
           >
             <Text style={styles.userName}>{currentUser.fullName || currentUser.username} (Vous)</Text>
-            {!viewingAsUser && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+            {!viewingAs && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
           </TouchableOpacity>
         )}
         <FlatList
@@ -85,12 +85,12 @@ const Settings = ({ viewingAsUser, setViewingAsUser }) => {
             <TouchableOpacity
               style={[
                 styles.userItem,
-                viewingAsUser?.uid === item.uid && styles.activeUserItem
+                viewingAs?.uid === item.uid && styles.activeUserItem
               ]}
               onPress={() => handleUserSwitch(item)}
             >
               <Text style={styles.userName}>{item.fullName}</Text>
-              {viewingAsUser?.uid === item.uid && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+              {viewingAs?.uid === item.uid && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
             </TouchableOpacity>
           )}
           ListEmptyComponent={<Text style={{color: "#999", margin: 10}}>Aucun utilisateur partagé.</Text>}

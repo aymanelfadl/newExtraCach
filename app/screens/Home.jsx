@@ -7,28 +7,27 @@ import AddRevenue from '../../components/AddRevenue';
 import Header from '../../components/Header';
 import { colors, spacing, borderRadius, typography, shadows, commonStyles } from '../../styles/theme';
 import { authService, userService, transactionService } from '../../services/index';
+import { useUser } from '../../context/UserContext';
 
 const Home = () => {
+  const { user, viewingAs, setViewingAsUser } = useUser(); 
   const [expenseModalVisible, setExpenseModalVisible] = useState(false);
   const [revenueModalVisible, setRevenueModalVisible] = useState(false);
   const [userSwitchModalVisible, setUserSwitchModalVisible] = useState(false);
-  const [currentUser, setCurrentUser] = useState({ username: 'aymanelfadl' });
-  const [viewingAsUser, setViewingAsUser] = useState(null);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  const effectiveUser = viewingAs || user;
 
   const today = new Date();
   const todayDate = today.toLocaleDateString('fr-FR', 
     { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    // Fetch current user and shared users
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const user = await authService.getCurrentUser();
         if (user) {
-          setCurrentUser(user);
           const result = await userService.getUsersWithSharedAccess();
           if (result.success) setAvailableUsers(result.users);
         }
@@ -37,35 +36,32 @@ const Home = () => {
       }
     };
     loadUserData();
-  }, []);
+  }, [user]);
 
   // Fetch recent transactions for today
   const fetchTransactions = useCallback(async () => {
     setRefreshing(true);
     try {
-      const userId = viewingAsUser ? viewingAsUser.uid : currentUser.uid;
-      const { success, transactions, error } = await transactionService.getTransactions();
+      const userId = effectiveUser?.uid;
+      const { success, transactions, error } = await transactionService.getTransactions(userId); // <-- pass userId if needed
       if (!success) {
-        console.log("getTransactions error:", error);
         Alert.alert("Erreur", "Impossible de récupérer les transactions.\n" + (error || ''));
         return;
       }
-      if (success) {
-        const todayTxs = transactions.filter(
-          t => t.dateAdded === todayDate
-        );
-        todayTxs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-        setRecentTransactions(todayTxs);
-      }
+      const todayTxs = transactions.filter(
+        t => t.dateAdded === todayDate
+      );
+      todayTxs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      setRecentTransactions(todayTxs);
     } catch (e) {
       console.error('Error fetching transactions:', e);
     }
     setRefreshing(false);
-  }, [viewingAsUser, currentUser, todayDate]);
+  }, [effectiveUser, todayDate]);
 
   useEffect(() => {
     fetchTransactions();
-  }, [fetchTransactions, expenseModalVisible, revenueModalVisible, viewingAsUser]);
+  }, [fetchTransactions, expenseModalVisible, revenueModalVisible, viewingAs]);
 
   const handleSaveExpense = async (expenseData) => {
     setExpenseModalVisible(false);
@@ -126,11 +122,10 @@ const Home = () => {
 
   const handleSelectUser = async (user) => {
     try {
+      await setViewingAsUser(user); // <-- 4. Use context setter
       if (user) {
-        setViewingAsUser(user);
         Alert.alert("Compte utilisateur changé", `Vous consultez maintenant le compte de ${user.fullName}`);
       } else {
-        setViewingAsUser(null);
         Alert.alert("Retour à votre compte", "Vous consultez maintenant votre propre compte");
       }
     } catch (error) {
@@ -146,13 +141,13 @@ const Home = () => {
   const todayExpenses = recentTransactions.filter(t => t.isExpense).reduce((sum, t) => sum + (Number(t.spends) || 0), 0);
   const todayBalance = todayIncome - todayExpenses;
 
-  // Quick action buttons
+  // Quick action buttons (disable if viewing as another user)
   const quickActionBtns = [
     { 
       title: "Dépense",
       description: "Nouvelle dépense", 
       onPress: () => {
-        if (viewingAsUser) {
+        if (viewingAs) {
           Alert.alert("Action limitée", "Vous ne pouvez pas ajouter de dépenses lorsque vous consultez le compte d'un autre utilisateur.");
         } else {
           setExpenseModalVisible(true);
@@ -165,7 +160,7 @@ const Home = () => {
       title: "Revenu", 
       description: "Nouveau revenu",
       onPress: () => {
-        if (viewingAsUser) {
+        if (viewingAs) {
           Alert.alert("Action limitée", "Vous ne pouvez pas ajouter de revenus lorsque vous consultez le compte d'un autre utilisateur.");
         } else {
           setRevenueModalVisible(true);
@@ -178,7 +173,7 @@ const Home = () => {
       title: "Employé", 
       description: "Dép. employé",
       onPress: () => {
-        if (viewingAsUser) {
+        if (viewingAs) {
           Alert.alert("Action limitée", "Vous ne pouvez pas effectuer cette action lorsque vous consultez le compte d'un autre utilisateur.");
         } else {
           Alert.alert("Info", "Bientôt disponible : gestion des dépenses employé !");
@@ -195,7 +190,7 @@ const Home = () => {
         screenName={"Accueil"} 
         showUserSwitch={true} 
         onUserSwitchPress={handleOpenUserSwitch}
-        viewingAsUser={viewingAsUser}
+        viewingAsUser={viewingAs}
       />
       <ScrollView
         style={styles.scrollView}
@@ -203,11 +198,11 @@ const Home = () => {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchTransactions} />}
       >
-        {viewingAsUser && (
+        {viewingAs && (
           <View style={styles.viewingAsBanner}>
             <Icon name="account-eye" size={20} color={colors.white} />
             <Text style={styles.viewingAsText}>
-              Consultation du compte de {viewingAsUser.fullName}
+              Consultation du compte de {viewingAs.fullName}
             </Text>
             <TouchableOpacity onPress={() => handleSelectUser(null)}>
               <Text style={styles.exitViewingText}>Retour</Text>
@@ -304,7 +299,7 @@ const Home = () => {
         <View style={styles.userInfo}>
           <Text style={styles.userInfoText}>
             Connecté en tant que <Text style={styles.username}>
-              {viewingAsUser ? `${currentUser.username} (vue: ${viewingAsUser.fullName})` : currentUser.username}
+              {viewingAs ? `${user?.username} (vue: ${viewingAs.fullName})` : user?.username}
             </Text>
           </Text>
         </View>
@@ -344,61 +339,44 @@ const Home = () => {
             </Text>
             {/* Current user account option */}
             <TouchableOpacity 
-              style={[styles.userSwitchItem, !viewingAsUser ? styles.activeUserItem : null]}
+              style={[styles.userSwitchItem, !viewingAs ? styles.activeUserItem : null]}
               onPress={() => handleSelectUser(null)}
             >
               <View style={styles.userAvatar}>
-                <Text style={styles.userInitial}>{currentUser.username}</Text>
+                <Text style={styles.userInitial}>{user?.username?.charAt(0) ?? "?"}</Text>
               </View>
               <View style={styles.userSwitchDetails}>
                 <Text style={styles.userSwitchName}>
-                  {currentUser.fullName || currentUser.username} (Vous)
+                  {user?.fullName || user?.username || "Vous"}
                 </Text>
-                <Text style={styles.userSwitchEmail}>{currentUser.email || 'votre@email.com'}</Text>
+                <Text style={styles.userSwitchEmail}>{user?.email || 'votre@email.com'}</Text>
               </View>
-              {!viewingAsUser && (
+              {!viewingAs && (
                 <Icon name="check-circle" size={24} color={colors.primary} />
               )}
             </TouchableOpacity>
-            {/* Example shared accounts */}
-            <TouchableOpacity 
-              style={[styles.userSwitchItem, viewingAsUser?.uid === '123' ? styles.activeUserItem : null]}
-              onPress={() => handleSelectUser({
-                uid: '123',
-                fullName: 'Mohammed Alami',
-                email: 'mohammed@example.com'
-              })}
-            >
-              <View style={[styles.userAvatar, {backgroundColor: colors.income}]}>
-                <Text style={styles.userInitial}>M</Text>
-              </View>
-              <View style={styles.userSwitchDetails}>
-                <Text style={styles.userSwitchName}>Mohammed Alami</Text>
-                <Text style={styles.userSwitchEmail}>mohammed@example.com</Text>
-              </View>
-              {viewingAsUser?.uid === '123' && (
-                <Icon name="check-circle" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.userSwitchItem, viewingAsUser?.uid === '456' ? styles.activeUserItem : null]}
-              onPress={() => handleSelectUser({
-                uid: '456',
-                fullName: 'Sara Bennani',
-                email: 'sara@example.com'
-              })}
-            >
-              <View style={[styles.userAvatar, {backgroundColor: colors.warning}]}>
-                <Text style={styles.userInitial}>S</Text>
-              </View>
-              <View style={styles.userSwitchDetails}>
-                <Text style={styles.userSwitchName}>Sara Bennani</Text>
-                <Text style={styles.userSwitchEmail}>sara@example.com</Text>
-              </View>
-              {viewingAsUser?.uid === '456' && (
-                <Icon name="check-circle" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
+            {/* Dynamically list shared users */}
+            {availableUsers.map(sharedUser => (
+              <TouchableOpacity 
+                key={sharedUser.uid}
+                style={[
+                  styles.userSwitchItem, 
+                  viewingAs?.uid === sharedUser.uid ? styles.activeUserItem : null
+                ]}
+                onPress={() => handleSelectUser(sharedUser)}
+              >
+                <View style={[styles.userAvatar, {backgroundColor: colors.income}]}>
+                  <Text style={styles.userInitial}>{sharedUser.fullName?.charAt(0) ?? "?"}</Text>
+                </View>
+                <View style={styles.userSwitchDetails}>
+                  <Text style={styles.userSwitchName}>{sharedUser.fullName}</Text>
+                  <Text style={styles.userSwitchEmail}>{sharedUser.email}</Text>
+                </View>
+                {viewingAs?.uid === sharedUser.uid && (
+                  <Icon name="check-circle" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
             <Text style={styles.userSwitchFooter}>
               Les données consultées sont en lecture seule.
             </Text>

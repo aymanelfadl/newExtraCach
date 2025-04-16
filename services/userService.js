@@ -10,7 +10,6 @@ export const userService = {
       // Get current user from AsyncStorage (just for UID)
       
       const userData = await AsyncStorage.getItem(CURRENT_USER_KEY);
-      console.log('User data from AsyncStorage:', userData);
       if (!userData) return { success: true, users: [] };
       const user = JSON.parse(userData);
 
