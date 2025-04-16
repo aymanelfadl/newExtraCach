@@ -18,13 +18,11 @@ const Home = () => {
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Get today's date in DD/MM/YYYY format
   const today = new Date();
-  const todayDate = today.toLocaleDateString('fr-FR', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  });
+  const todayDate = today.toLocaleDateString('fr-FR', 
+    { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  // Fetch current user and shared users
+    // Fetch current user and shared users
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -46,13 +44,16 @@ const Home = () => {
     setRefreshing(true);
     try {
       const userId = viewingAsUser ? viewingAsUser.uid : currentUser.uid;
-      const { success, transactions } = await transactionService.getTransactions();
+      const { success, transactions, error } = await transactionService.getTransactions();
+      if (!success) {
+        console.log("getTransactions error:", error);
+        Alert.alert("Erreur", "Impossible de récupérer les transactions.\n" + (error || ''));
+        return;
+      }
       if (success) {
-        // Only show today's transactions
         const todayTxs = transactions.filter(
           t => t.dateAdded === todayDate
         );
-        // Sort by time descending if available
         todayTxs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         setRecentTransactions(todayTxs);
       }
@@ -66,7 +67,6 @@ const Home = () => {
     fetchTransactions();
   }, [fetchTransactions, expenseModalVisible, revenueModalVisible, viewingAsUser]);
 
-  // Handlers to add expense/revenue
   const handleSaveExpense = async (expenseData) => {
     if (expenseData.spends <= 0) {
       Alert.alert("Erreur", "Le montant de la dépense doit être supérieur à zéro.");
@@ -76,7 +76,6 @@ const Home = () => {
       ...expenseData,
       description: expenseData.description,
       spends: Number(expenseData.spends),
-      dateAdded: todayDate,
       isExpense: true,
       createdAt: new Date().toISOString(),
       time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
@@ -104,7 +103,6 @@ const Home = () => {
       ...revenueData,
       description: revenueData.description,
       spends: Number(revenueData.spends),
-      dateAdded: todayDate,
       isExpense: false,
       createdAt: new Date().toISOString(),
       time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
@@ -344,12 +342,13 @@ const Home = () => {
               Vous pouvez consulter les comptes qui ont été partagés avec vous.
               Vous pourrez voir les données sans les modifier.
             </Text>
+            {/* Current user account option */}
             <TouchableOpacity 
               style={[styles.userSwitchItem, !viewingAsUser ? styles.activeUserItem : null]}
               onPress={() => handleSelectUser(null)}
             >
               <View style={styles.userAvatar}>
-                <Text style={styles.userInitial}>{currentUser.username }</Text>
+                <Text style={styles.userInitial}>{currentUser.username}</Text>
               </View>
               <View style={styles.userSwitchDetails}>
                 <Text style={styles.userSwitchName}>
