@@ -68,6 +68,7 @@ const Home = () => {
   }, [fetchTransactions, expenseModalVisible, revenueModalVisible, viewingAsUser]);
 
   const handleSaveExpense = async (expenseData) => {
+    setExpenseModalVisible(false);
     if (expenseData.spends <= 0) {
       Alert.alert("Erreur", "Le montant de la dépense doit être supérieur à zéro.");
       return;
@@ -86,7 +87,6 @@ const Home = () => {
         Alert.alert("Erreur", "Impossible d'ajouter la dépense.");
         return;
       }
-      setExpenseModalVisible(false);
       fetchTransactions();
       Alert.alert("Dépense ajoutée", `Dépense de ${expenseData.spends} MAD ajoutée avec succès.`);
     } catch (err) {
@@ -95,6 +95,7 @@ const Home = () => {
   };
 
   const handleSaveRevenue = async (revenueData) => {
+    setRevenueModalVisible(false);
     if (revenueData.spends <= 0) {
       Alert.alert("Erreur", "Le montant du revenu doit être supérieur à zéro.");
       return;
@@ -113,7 +114,6 @@ const Home = () => {
         Alert.alert("Erreur", "Impossible d'ajouter le revenu.");
         return;
       }
-      setRevenueModalVisible(false);
       fetchTransactions();
       Alert.alert("Revenu ajouté", `Revenu de ${revenueData.spends} MAD ajouté avec succès.`);
     } catch (err) {
