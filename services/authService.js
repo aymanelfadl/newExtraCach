@@ -80,6 +80,7 @@ export const authService = {
   grantAccess: async (currentUserUid, targetUserEmail) => {
     try {
       const usersSnapshot = await getDocs(query(collection(db, 'users'), where('email', '==', targetUserEmail)));
+      console.log("targetUserEmail", targetUserEmail);
       if (usersSnapshot.empty) {
         return { success: false, error: "L'utilisateur n'existe pas" };
       }

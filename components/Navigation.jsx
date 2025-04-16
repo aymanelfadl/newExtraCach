@@ -5,9 +5,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Home from '../app/screens/Home';
 import Expense from '../app/screens/Expense';
 import Revenue from '../app/screens/Revenue';
-import Employees from '../app/screens/Employees';      // <-- Add this import
-import Dashboard from '../app/screens/Dashboard';      // <-- Add this import
-import Settings from '../app/screens/Settings';        // <-- Add this import
+import Employees from '../app/screens/Employees';
+import Dashboard from '../app/screens/Dashboard';     
+import Settings from '../app/screens/Settings';        
 
 import { colors, typography, shadows } from '../styles/theme';
 

@@ -1,140 +1,159 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-        View, 
-        Text, 
-        StyleSheet, 
-        TouchableOpacity, 
-        Switch,
-        Alert 
-    } from 'react-native';
-    
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Alert, 
+  FlatList 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons'; // Assuming you're using Expo
-const Settings = () => {
-const navigation = useNavigation();
-const [notifications, setNotifications] = useState(true);
-const [darkMode, setDarkMode] = useState(false);
+import { Ionicons } from '@expo/vector-icons';
 
-const handleLogout = () => {
+// Import your services!
+import { userService, authService } from '../../services/index';
+
+const Settings = ({ viewingAsUser, setViewingAsUser }) => {
+  const navigation = useNavigation();
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    // Load shared users and current user from your service
+    const loadData = async () => {
+      const user = await authService.getCurrentUser();
+      setCurrentUser(user);
+      const result = await userService.getUsersWithSharedAccess();
+      if (result.success) setAvailableUsers(result.users);
+    };
+    loadData();
+  }, []);
+
+  const handleUserSwitch = async (user) => {
+    setViewingAsUser(user); // Ideally, you set this in a context/provider or pass down as a prop
+    Alert.alert("Compte utilisateur changé", `Vous consultez maintenant le compte de ${user.fullName}`);
+  };
+
+  const handleReturnToMyAccount = () => {
+    setViewingAsUser(null);
+    Alert.alert("Retour à votre compte", "Vous consultez maintenant votre propre compte");
+  };
+
+  const handleLogout = async () => {
     Alert.alert(
-        "Logout",
-        "Are you sure you want to logout?",
-        [
-            {
-                text: "Cancel",
-                style: "cancel"
-            },
-            { 
-                text: "Logout", 
-                onPress: () => {
-                    // Add your logout logic here
-                    // Example: await auth.signOut();
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'Login' }]
-                    });
-                },
-                style: "destructive"
-            }
-        ]
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Logout", 
+          onPress: async () => {
+            await authService.logout();
+            navigation.reset({ index: 0, routes: [{ name: 'LogIn' }] });
+          },
+          style: "destructive"
+        }
+      ]
     );
-};
+  };
 
-return (
+  return (
     <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>Settings</Text>
-        
-        <View style={styles.settingSection}>
-            <View style={styles.settingItem}>
-                <Text style={styles.settingText}>Notifications</Text>
-                <Switch
-                    value={notifications}
-                    onValueChange={setNotifications}
-                    trackColor={{ false: "#767577", true: "#4CAF50" }}
-                />
-            </View>
-            
-            <View style={styles.settingItem}>
-                <Text style={styles.settingText}>Dark Mode</Text>
-                <Switch
-                    value={darkMode}
-                    onValueChange={setDarkMode}
-                    trackColor={{ false: "#767577", true: "#4CAF50" }}
-                />
-            </View>
-            
-            <TouchableOpacity style={styles.settingItemButton} onPress={() => navigation.navigate('Profile')}>
-                <Text style={styles.settingText}>Edit Profile</Text>
-                <Ionicons name="chevron-forward" size={24} color="#555" />
+      <Text style={styles.title}>Settings</Text>
+      <View style={styles.settingSection}>
+        <Text style={styles.sectionLabel}>Voir un autre compte</Text>
+        {currentUser && (
+          <TouchableOpacity
+            style={[
+              styles.userItem,
+              !viewingAsUser && styles.activeUserItem
+            ]}
+            onPress={handleReturnToMyAccount}
+          >
+            <Text style={styles.userName}>{currentUser.fullName || currentUser.username} (Vous)</Text>
+            {!viewingAsUser && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+          </TouchableOpacity>
+        )}
+        <FlatList
+          data={availableUsers}
+          keyExtractor={item => item.uid}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.userItem,
+                viewingAsUser?.uid === item.uid && styles.activeUserItem
+              ]}
+              onPress={() => handleUserSwitch(item)}
+            >
+              <Text style={styles.userName}>{item.fullName}</Text>
+              {viewingAsUser?.uid === item.uid && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.settingItemButton} onPress={() => navigation.navigate('ChangePassword')}>
-                <Text style={styles.settingText}>Change Password</Text>
-                <Ionicons name="chevron-forward" size={24} color="#555" />
-            </TouchableOpacity>
-        </View>
-        
+          )}
+          ListEmptyComponent={<Text style={{color: "#999", margin: 10}}>Aucun utilisateur partagé.</Text>}
+        />
+      </View>
+        <TouchableOpacity style={styles.settingItemButton}
+            onPress={() => navigation.navigate('AddSharedUser')}>
+            <Text style={styles.settingText}>Ajouter un utilisateur partagé</Text>
+            <Ionicons name="chevron-forward" size={24} color="#555" />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
     </SafeAreaView>
-);
+  );
 };
 
 const styles = StyleSheet.create({
-container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 16
-},
-title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: '#333'
-},
-settingSection: {
+  container: {
+    flex: 1, backgroundColor: '#f5f5f5', padding: 16
+  },
+  title: {
+    fontSize: 24, fontWeight: 'bold', marginBottom: 24, color: '#333'
+  },
+  settingSection: {
     backgroundColor: 'white',
     borderRadius: 12,
     marginBottom: 24,
+    padding: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2
-},
-settingItem: {
+  },
+  sectionLabel: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 8
+  },
+  userItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#eee'
-},
-settingItemButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee'
-},
-settingText: {
+  },
+  activeUserItem: {
+    backgroundColor: '#E8F5E9'
+  },
+  userName: {
     fontSize: 16,
     color: '#333'
-},
-logoutButton: {
+  },
+  logoutButton: {
     backgroundColor: '#FF3B30',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center'
-},
-logoutText: {
+  },
+  logoutText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold'
-}
+  }
 });
 
 export default Settings;

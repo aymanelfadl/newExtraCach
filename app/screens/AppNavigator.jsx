@@ -4,6 +4,7 @@ import EmployeeDetail from '../../components/EmployeeDetail';
 import LogIn from './LogIn';
 import SplashScreen from './SplashScreen';
 import { useUser } from '../../context/UserContext';
+import AddSharedUser from '../../components/AddSharedUser';
 import React, { useState, useEffect } from 'react';
 
 const Stack = createNativeStackNavigator();
@@ -27,6 +28,7 @@ const AppNavigator = () => {
         <>
           <Stack.Screen name="MainTabs" component={TabNavigator} />
           <Stack.Screen name="EmployeeDetail" component={EmployeeDetail} />
+          <Stack.Screen name="AddSharedUser" component={AddSharedUser} options={{ headerShown: false }} />
         </>
       )}
     </Stack.Navigator>

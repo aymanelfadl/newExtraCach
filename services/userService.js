@@ -1,5 +1,6 @@
 import { db } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, collection, query, where, getDocs } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CURRENT_USER_KEY = '@financial_app:currentUser';
@@ -52,5 +53,6 @@ export const userService = {
     } catch (err) {
       return { success: false, error: err.message };
     }
-  }
+  },
+  
 };
