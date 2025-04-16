@@ -60,6 +60,10 @@ export const authService = {
         message = "Aucun utilisateur trouvé avec cet e-mail.";
       } else if (error.code === 'auth/too-many-requests') {
         message = "Trop de tentatives échouées. Veuillez réessayer plus tard.";
+      }else if (error.code === 'auth/invalid-email') {
+        message = "L'e-mail est invalide.";
+      }else if (error.code === 'auth/email-already-in-use') {
+        message = "L'e-mail est déjà utilisé.";
       }
       return { success: false, error: message };
     }
