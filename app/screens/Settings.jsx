@@ -20,18 +20,22 @@ const Settings = ({ viewingAsUser, setViewingAsUser }) => {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    // Load shared users and current user from your service
     const loadData = async () => {
       const user = await authService.getCurrentUser();
+      if (!user) {
+        Alert.alert("Erreur", "Utilisateur non authentifié.");
+        return;
+      }
       setCurrentUser(user);
       const result = await userService.getUsersWithSharedAccess();
-      if (result.success) setAvailableUsers(result.users);
+      console.log('Available users:', result.users);
+      setAvailableUsers(result.users); 
     };
     loadData();
   }, []);
 
   const handleUserSwitch = async (user) => {
-    setViewingAsUser(user); // Ideally, you set this in a context/provider or pass down as a prop
+    setViewingAsUser(user);
     Alert.alert("Compte utilisateur changé", `Vous consultez maintenant le compte de ${user.fullName}`);
   };
 
@@ -50,7 +54,6 @@ const Settings = ({ viewingAsUser, setViewingAsUser }) => {
           text: "Logout", 
           onPress: async () => {
             await authService.logout();
-            navigation.reset({ index: 0, routes: [{ name: 'LogIn' }] });
           },
           style: "destructive"
         }

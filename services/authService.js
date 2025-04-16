@@ -50,8 +50,18 @@ export const authService = {
         throw new Error('User profile not found');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: error.message };
+      let message = 'Une erreur est survenue. Veuillez réessayer.';
+      if (
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/invalid-credential'
+      ) {
+        message = 'E-mail ou mot de passe incorrect.';
+      } else if (error.code === 'auth/user-not-found') {
+        message = "Aucun utilisateur trouvé avec cet e-mail.";
+      } else if (error.code === 'auth/too-many-requests') {
+        message = "Trop de tentatives échouées. Veuillez réessayer plus tard.";
+      }
+      return { success: false, error: message };
     }
   },
 

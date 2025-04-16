@@ -21,10 +21,8 @@ const AddSharedUser = ({ navigation }) => {
       Alert.alert("Erreur", "Utilisateur courant non authentifié.");
       return;
     }
-    console.log("currentUser", currentUser);
     const result = await authService.grantAccess(currentUser.uid, email.trim());
     setLoading(false);
-  
     if (result.success) {
       Alert.alert("Succès", "L'utilisateur a été ajouté comme utilisateur partagé.", [
         { text: "OK", onPress: () => navigation.goBack() }

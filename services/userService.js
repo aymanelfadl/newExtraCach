@@ -1,6 +1,5 @@
 import { db } from './firebase';
-import { doc, updateDoc, arrayUnion, collection, query, where, getDocs } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CURRENT_USER_KEY = '@financial_app:currentUser';
@@ -8,10 +7,19 @@ const CURRENT_USER_KEY = '@financial_app:currentUser';
 export const userService = {
   getUsersWithSharedAccess: async () => {
     try {
+      // Get current user from AsyncStorage (just for UID)
+      
       const userData = await AsyncStorage.getItem(CURRENT_USER_KEY);
+      console.log('User data from AsyncStorage:', userData);
       if (!userData) return { success: true, users: [] };
       const user = JSON.parse(userData);
-      const ids = user.hasAccessTo || [];
+
+      // Always fetch the latest user doc from Firestore!
+      const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+      if (!userDocSnap.exists()) return { success: true, users: [] };
+      const userDoc = userDocSnap.data();
+      const ids = userDoc.hasAccessTo || [];
+
       if (ids.length === 0) {
         return { success: true, users: [] };
       }
