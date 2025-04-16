@@ -16,9 +16,9 @@ const AppNavigator = () => {
     const timer = setTimeout(() => setIsInitializing(false), 2000);
     return () => clearTimeout(timer);
   }, []);
-
+  
   if (loading || isInitializing) return <SplashScreen />;
-
+  
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (

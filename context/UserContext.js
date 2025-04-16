@@ -4,16 +4,11 @@ import { onAuthStateChanged } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 
-// Create context
 const UserContext = createContext(null);
 
-// Constants for AsyncStorage
-const USER_DATA_KEY = '@financeApp:userData';
-const VIEWING_AS_KEY = '@financeApp:viewingAs';
-
-// Current date and time from your provided info
-const CURRENT_DATE_TIME = '2025-04-15 16:04:43';
-const CURRENT_USER_LOGIN = 'aymanelfadl';
+// Standardized keys
+const USER_DATA_KEY = '@financial_app:currentUser';
+const VIEWING_AS_KEY = '@financial_app:viewingAs';
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -28,7 +23,6 @@ export const UserProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Check auth state on component mount
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       try {
@@ -37,17 +31,16 @@ export const UserProvider = ({ children }) => {
           const userData = {
             uid: authUser.uid,
             email: authUser.email,
-            displayName: authUser.displayName || CURRENT_USER_LOGIN,
+            fullName: authUser.displayName || '', // use fullName for consistency
             photoURL: authUser.photoURL,
             emailVerified: authUser.emailVerified,
-            lastLoginAt: CURRENT_DATE_TIME,
+            lastLoginAt: new Date().toISOString(),
           };
           await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
           const viewingAsData = await AsyncStorage.getItem(VIEWING_AS_KEY);
           if (viewingAsData) setViewingAs(JSON.parse(viewingAsData));
           setUser(userData);
         } else {
-          // User is signed out
           await AsyncStorage.removeItem(USER_DATA_KEY);
           await AsyncStorage.removeItem(VIEWING_AS_KEY);
           setUser(null);
@@ -108,10 +101,8 @@ export const UserProvider = ({ children }) => {
     viewingAs,
     setViewingAsUser,
     canModifyData,
-    currentDateTime: CURRENT_DATE_TIME,
-    currentUserLogin: CURRENT_USER_LOGIN,
     userId: user?.uid || null,
-    networkStatus: isOnline ? "online" : "offline" 
+    networkStatus: isOnline ? "online" : "offline"
   };
 
   return (

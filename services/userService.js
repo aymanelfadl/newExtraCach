@@ -1,48 +1,56 @@
-import { db, storage } from './firebase';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db } from './firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authService } from './authService';
 
-const USER_SETTINGS_KEY = '@financial_app:userSettings';
+const CURRENT_USER_KEY = '@financial_app:currentUser';
 
 export const userService = {
-  // Get user profile
-  getUserProfile: async (userId) => {
+  getUsersWithSharedAccess: async () => {
     try {
-      // Check if we're online and can fetch from Firestore
-      const networkState = await NetInfo.fetch();
-      const isOnline = networkState.isConnected && networkState.isInternetReachable;
-      
-      if (isOnline) {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          
-          // Save to AsyncStorage for offline access
-          await AsyncStorage.setItem(`@financial_app:user_${userId}`, JSON.stringify(userData));
-          
-          return { success: true, profile: userData };
-        } else {
-          return { success: false, error: "Utilisateur non trouvé" };
-        }
-      } else {
-        // Try to get from offline storage
-        const offlineUserData = await AsyncStorage.getItem(`@financial_app:user_${userId}`);
-        
-        if (offlineUserData) {
-          return { success: true, profile: JSON.parse(offlineUserData), isOffline: true };
-        } else {
-          return { success: false, error: "Utilisateur non disponible hors ligne" };
+      const userData = await AsyncStorage.getItem(CURRENT_USER_KEY);
+      if (!userData) return { success: true, users: [] };
+      const user = JSON.parse(userData);
+      const ids = user.hasAccessTo || [];
+      if (ids.length === 0) {
+        return { success: true, users: [] };
+      }
+      const users = [];
+      for (const id of ids) {
+        const sharedUserDoc = await getDoc(doc(db, 'users', id));
+        if (sharedUserDoc.exists()) {
+          const d = sharedUserDoc.data();
+          users.push({ uid: d.uid, email: d.email, fullName: d.fullName });
         }
       }
-    } catch (error) {
-      console.error('Get user profile error:', error);
-      return { success: false, error: error.message };
+      return { success: true, users };
+    } catch (err) {
+      return { success: false, error: err.message, users: [] };
+    }
+  },
+  getEmployees: async () => {
+    try {
+      const q = query(collection(db, 'users'), where('role', '==', 'employee'));
+      const snap = await getDocs(q);
+      const employees = [];
+      snap.forEach(doc => {
+        employees.push(doc.data());
+      });
+      return { success: true, employees };
+    } catch (err) {
+      return { success: false, error: err.message, employees: [] };
     }
   },
 
-  // Get list of users who how i can see there data without changing their data
-
-}
+  getUserById: async (userId) => {
+    try {
+      const docRef = doc(db, 'users', userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { success: true, user: docSnap.data() };
+      }
+      return { success: false, error: 'User not found' };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+};
