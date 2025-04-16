@@ -10,20 +10,18 @@ const AddExpense = ({ visible, onClose, onSave, initialData, isEditing = false }
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Initialize form with data when editing
   useEffect(() => {
     if (isEditing && initialData) {
       setDescription(initialData.description || '');
       setAmount(initialData.spends?.toString() || '');
       
-      // Parse date if it exists
       if (initialData.dateAdded) {
         try {
           // Try to parse the date string, assuming it's in DD/MM/YYYY format
           const parts = initialData.dateAdded.split('/');
           if (parts.length === 3) {
             const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1; // Months are 0-indexed in JS Date
+            const month = parseInt(parts[1], 10) - 1;
             const year = parseInt(parts[2], 10);
             const parsedDate = new Date(year, month, day);
             
@@ -33,11 +31,10 @@ const AddExpense = ({ visible, onClose, onSave, initialData, isEditing = false }
           }
         } catch (e) {
           console.error('Error parsing date', e);
-          setDate(new Date()); // Fallback to current date
+          setDate(new Date());
         }
       }
     } else {
-      // Reset form when adding new
       setDescription('');
       setAmount('');
       setDate(new Date());
@@ -46,11 +43,9 @@ const AddExpense = ({ visible, onClose, onSave, initialData, isEditing = false }
 
   const handleSave = () => {
     if (!description.trim() || !amount.trim()) {
-      // Validation: Both fields are required
       return;
     }
 
-    // Format date as DD/MM/YYYY
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();

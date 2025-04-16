@@ -5,6 +5,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Home from '../app/screens/Home';
 import Expense from '../app/screens/Expense';
 import Revenue from '../app/screens/Revenue';
+import Employees from '../app/screens/Employees';      // <-- Add this import
+import Dashboard from '../app/screens/Dashboard';      // <-- Add this import
+import Settings from '../app/screens/Settings';        // <-- Add this import
 
 import { colors, typography, shadows } from '../styles/theme';
 
@@ -40,7 +43,7 @@ export const TabNavigator = () => {
           ),
         }}
       />
-      
+
       <Tab.Screen
         name="Expense"
         component={Expense}
@@ -51,7 +54,7 @@ export const TabNavigator = () => {
           ),
         }}
       />
-      
+
       <Tab.Screen
         name="Revenue"
         component={Revenue}
@@ -59,6 +62,37 @@ export const TabNavigator = () => {
           tabBarLabel: 'Revenus',
           tabBarIcon: ({ color, size }) => (
             <Icon name="cash-plus" color={color} size={size} />
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Employees"
+        component={Employees}
+        options={{
+          tabBarLabel: 'Employés',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="account-group" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Dashboard"
+        component={Dashboard}
+        options={{
+          tabBarLabel: 'Dashboard',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="view-dashboard" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={Settings}
+        options={{
+          tabBarLabel: 'Paramètres',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="cog" color={color} size={size} />
           ),
         }}
       />

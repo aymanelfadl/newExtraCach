@@ -1,15 +1,20 @@
-import { useState } from 'react';
-import { View, StyleSheet, ScrollView, Text, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Text, TouchableOpacity, Alert, Modal } from 'react-native';
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { HomeButton } from "../../components/HomeButton";
 import AddExpense from '../../components/AddExpense';
 import AddRevenue from '../../components/AddRevenue';
 import Header from '../../components/Header';
 import { colors, spacing, borderRadius, typography, shadows, commonStyles } from '../../styles/theme';
+import { authService, userService, transactionService } from '../../services/index';
 
 const Home = () => {
   const [expenseModalVisible, setExpenseModalVisible] = useState(false);
   const [revenueModalVisible, setRevenueModalVisible] = useState(false);
+  const [userSwitchModalVisible, setUserSwitchModalVisible] = useState(false);
+  const [currentUser, setCurrentUser] = useState({ username: 'aymanelfadl' });
+  const [viewingAsUser, setViewingAsUser] = useState(null);
+  const [availableUsers, setAvailableUsers] = useState([]);
   
   // Current date formatting
   const today = new Date();
@@ -19,68 +24,84 @@ const Home = () => {
     year: 'numeric'
   });
   
-  // Mock data for recent transactions
-  const [recentTransactions, setRecentTransactions] = useState([
-    {
-      id: '1',
-      description: 'Courses alimentaires',
-      spends: 250,
-      dateAdded: '15/04/2025',
-      isExpense: true,
-      time: '13:45'
-    },
-    {
-      id: '2',
-      description: 'Salaire',
-      spends: 4500,
-      dateAdded: '15/04/2025',
-      isExpense: false,
-      time: '09:30'
-    },
-    {
-      id: '3',
-      description: 'Transport',
-      spends: 100,
-      dateAdded: '14/04/2025',
-      isExpense: true,
-      time: '18:20'
-    },
-    {
-      id: '4',
-      description: 'Freelance',
-      spends: 1200,
-      dateAdded: '12/04/2025',
-      isExpense: false,
-      time: '16:15'
-    },
-  ]);
+  // Fetch current user and users with shared access
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          
+          // Get list of users who have granted access to current user
+          const result = await userService.getUsersWithSharedAccess();
+          if (result.success) {
+            setAvailableUsers(result.users);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+    
+    loadUserData();
+  }, []);
+  
+  // Mock data for recent transactions - in real app, this would use the transaction service
+  const [recentTransactions, setRecentTransactions] = useState([]);
 
   const quickActionBtns = [
     { 
       title: "Dépense",
       description: "Nouvelle dépense", 
-      onPress: () => setExpenseModalVisible(true),
+      onPress: () => {
+        if (viewingAsUser) {
+          Alert.alert(
+            "Action limitée", 
+            "Vous ne pouvez pas ajouter de dépenses lorsque vous consultez le compte d'un autre utilisateur."
+          );
+        } else {
+          setExpenseModalVisible(true);
+        }
+      },
       backgroundColor: colors.expense,
       icon: "cash-minus" 
     },
     { 
       title: "Revenu", 
       description: "Nouveau revenu",
-      onPress: () => setRevenueModalVisible(true),
+      onPress: () => {
+        if (viewingAsUser) {
+          Alert.alert(
+            "Action limitée", 
+            "Vous ne pouvez pas ajouter de revenus lorsque vous consultez le compte d'un autre utilisateur."
+          );
+        } else {
+          setRevenueModalVisible(true);
+        }
+      },
       backgroundColor: colors.income,
       icon: "cash-plus" 
     },
     {
       title: "Employé", 
       description: "Dép. employé",
-      onPress: () => alert("Dépense pour Employé"),
+      onPress: () => {
+        if (viewingAsUser) {
+          Alert.alert(
+            "Action limitée", 
+            "Vous ne pouvez pas effectuer cette action lorsque vous consultez le compte d'un autre utilisateur."
+          );
+        } else {
+          alert("Dépense pour Employé");
+        }
+      },
       backgroundColor: colors.primary,
       icon: "account-cash" 
     },
   ];
 
-  const handleSaveExpense = (expenseData) => {
-    // Create new expense transaction
+  const handleSaveExpense = async (expenseData) => {
+    // In a real app, you'd use the transaction service here
     const newTransaction = {
       id: Date.now().toString(),
       description: expenseData.description,
@@ -90,13 +111,30 @@ const Home = () => {
       time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
     };
     
-    // Add to recent transactions at the beginning
+    // validate the new transaction
+    if (newTransaction.spends <= 0) {
+      Alert.alert("Erreur", "Le montant de la dépense doit être supérieur à zéro.");
+      return;
+    }
+    // add the new transaction to data base
+    try {
+       const result = await transactionService.addTransaction(newTransaction);
+       if (!result.success) {
+         Alert.alert("Erreur", "Impossible d'ajouter la dépense.");
+         return;
+       }
+    }catch (err)
+    {
+      console.log(err);
+      
+    }
+    Alert.alert("Dépense ajoutée", `Dépense de ${expenseData.spends} MAD ajoutée avec succès.`);
     setRecentTransactions([newTransaction, ...recentTransactions]);
     setExpenseModalVisible(false);
   };
 
   const handleSaveRevenue = (revenueData) => {
-    // Create new revenue transaction
+    // In a real app, you'd use the transaction service here
     const newTransaction = {
       id: Date.now().toString(),
       description: revenueData.description,
@@ -106,9 +144,47 @@ const Home = () => {
       time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
     };
     
-    // Add to recent transactions at the beginning
     setRecentTransactions([newTransaction, ...recentTransactions]);
     setRevenueModalVisible(false);
+  };
+
+  // User switching handlers
+  const handleOpenUserSwitch = () => {
+    setUserSwitchModalVisible(true);
+  };
+
+  const handleSelectUser = async (user) => {
+    try {
+      if (user) {
+        // In real app, you'd use the authService viewAs method
+        setViewingAsUser(user);
+        
+        // Fetch the selected user's transactions
+        // This would call transactionService.getTransactionsForUser(user.uid) in real app
+        
+        // For demo, just show an alert
+        Alert.alert(
+          "Compte utilisateur changé",
+          `Vous consultez maintenant le compte de ${user.fullName}`
+        );
+      } else {
+        // Switch back to own account
+        setViewingAsUser(null);
+        
+        // Reload the current user's transactions
+        // This would call transactionService.getTransactions() in real app
+        
+        Alert.alert(
+          "Retour à votre compte",
+          "Vous consultez maintenant votre propre compte"
+        );
+      }
+    } catch (error) {
+      console.error('Error switching user:', error);
+      Alert.alert("Erreur", "Impossible de changer d'utilisateur");
+    } finally {
+      setUserSwitchModalVisible(false);
+    }
   };
 
   // Calculate today's balance
@@ -124,13 +200,31 @@ const Home = () => {
 
   return (
     <View style={styles.container}>
-      <Header screenName={"Accueil"} />
+      <Header 
+        screenName={"Accueil"} 
+        showUserSwitch={true} 
+        onUserSwitchPress={handleOpenUserSwitch}
+        viewingAsUser={viewingAsUser}
+      />
       
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {/* Viewing as banner - show only when viewing as another user */}
+        {viewingAsUser && (
+          <View style={styles.viewingAsBanner}>
+            <Icon name="account-eye" size={20} color={colors.white} />
+            <Text style={styles.viewingAsText}>
+              Consultation du compte de {viewingAsUser.fullName}
+            </Text>
+            <TouchableOpacity onPress={() => handleSelectUser(null)}>
+              <Text style={styles.exitViewingText}>Retour</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      
         {/* Today's summary card */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>Aujourd'hui - {formattedDate}</Text>
@@ -224,7 +318,11 @@ const Home = () => {
         
         {/* User info */}
         <View style={styles.userInfo}>
-          <Text style={styles.userInfoText}>Connecté en tant que <Text style={styles.username}>aymanelfadl</Text></Text>
+          <Text style={styles.userInfoText}>
+            Connecté en tant que <Text style={styles.username}>
+              {viewingAsUser ? `${currentUser.username} (vue: ${viewingAsUser.fullName})` : currentUser.username}
+            </Text>
+          </Text>
         </View>
       </ScrollView>
       
@@ -240,6 +338,97 @@ const Home = () => {
         onClose={() => setRevenueModalVisible(false)} 
         onSave={handleSaveRevenue}
       />
+      
+      {/* User Switch Modal */}
+      <Modal
+        visible={userSwitchModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setUserSwitchModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.userSwitchModal}>
+            <View style={styles.userSwitchHeader}>
+              <Text style={styles.userSwitchTitle}>Voir les comptes partagés</Text>
+              <TouchableOpacity 
+                onPress={() => setUserSwitchModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Icon name="close" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.userSwitchDescription}>
+              Vous pouvez consulter les comptes qui ont été partagés avec vous.
+              Vous pourrez voir les données sans les modifier.
+            </Text>
+            
+            {/* Current user account option */}
+            <TouchableOpacity 
+              style={[styles.userSwitchItem, !viewingAsUser ? styles.activeUserItem : null]}
+              onPress={() => handleSelectUser(null)}
+            >
+              <View style={styles.userAvatar}>
+                <Text style={styles.userInitial}>{currentUser.username.charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.userSwitchDetails}>
+                <Text style={styles.userSwitchName}>
+                  {currentUser.fullName || currentUser.username} (Vous)
+                </Text>
+                <Text style={styles.userSwitchEmail}>{currentUser.email || 'votre@email.com'}</Text>
+              </View>
+              {!viewingAsUser && (
+                <Icon name="check-circle" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+            
+            {/* Mock shared accounts - in real app, use availableUsers from the API */}
+            <TouchableOpacity 
+              style={[styles.userSwitchItem, viewingAsUser?.uid === '123' ? styles.activeUserItem : null]}
+              onPress={() => handleSelectUser({
+                uid: '123',
+                fullName: 'Mohammed Alami',
+                email: 'mohammed@example.com'
+              })}
+            >
+              <View style={[styles.userAvatar, {backgroundColor: colors.income}]}>
+                <Text style={styles.userInitial}>M</Text>
+              </View>
+              <View style={styles.userSwitchDetails}>
+                <Text style={styles.userSwitchName}>Mohammed Alami</Text>
+                <Text style={styles.userSwitchEmail}>mohammed@example.com</Text>
+              </View>
+              {viewingAsUser?.uid === '123' && (
+                <Icon name="check-circle" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.userSwitchItem, viewingAsUser?.uid === '456' ? styles.activeUserItem : null]}
+              onPress={() => handleSelectUser({
+                uid: '456',
+                fullName: 'Sara Bennani',
+                email: 'sara@example.com'
+              })}
+            >
+              <View style={[styles.userAvatar, {backgroundColor: colors.warning}]}>
+                <Text style={styles.userInitial}>S</Text>
+              </View>
+              <View style={styles.userSwitchDetails}>
+                <Text style={styles.userSwitchName}>Sara Bennani</Text>
+                <Text style={styles.userSwitchEmail}>sara@example.com</Text>
+              </View>
+              {viewingAsUser?.uid === '456' && (
+                <Icon name="check-circle" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+            
+            <Text style={styles.userSwitchFooter}>
+              Les données consultées sont en lecture seule.
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -255,6 +444,28 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: spacing.medium,
     paddingBottom: spacing.extraLarge * 2,
+  },
+  viewingAsBanner: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.medium,
+    borderRadius: borderRadius.medium,
+    marginBottom: spacing.medium,
+  },
+  viewingAsText: {
+    color: colors.white,
+    fontSize: typography.sizeRegular,
+    fontWeight: typography.weightMedium,
+    flex: 1,
+    marginLeft: spacing.small,
+  },
+  exitViewingText: {
+    color: colors.white,
+    fontSize: typography.sizeRegular,
+    fontWeight: typography.weightBold,
+    textDecorationLine: 'underline',
   },
   summaryCard: {
     backgroundColor: colors.card,
@@ -376,7 +587,90 @@ const styles = StyleSheet.create({
   username: {
     fontWeight: typography.weightBold,
     color: colors.primary,
-  }
+  },
+  
+  // User switching modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.medium,
+  },
+  userSwitchModal: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.large,
+    padding: spacing.large,
+    width: '100%',
+    maxWidth: 500,
+    ...shadows.large,
+  },
+  userSwitchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.medium,
+  },
+  userSwitchTitle: {
+    fontSize: typography.sizeLarge,
+    fontWeight: typography.weightBold,
+    color: colors.textPrimary,
+  },
+  closeButton: {
+    padding: spacing.small,
+  },
+  userSwitchDescription: {
+    fontSize: typography.sizeRegular,
+    color: colors.textSecondary,
+    marginBottom: spacing.large,
+  },
+  userSwitchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.medium,
+    borderRadius: borderRadius.medium,
+    marginBottom: spacing.medium,
+    backgroundColor: colors.background,
+  },
+  activeUserItem: {
+    backgroundColor: `${colors.primary}20`, // 20% opacity primary color
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.medium,
+  },
+  userInitial: {
+    color: colors.white,
+    fontSize: typography.sizeLarge,
+    fontWeight: typography.weightBold,
+  },
+  userSwitchDetails: {
+    flex: 1,
+  },
+  userSwitchName: {
+    fontSize: typography.sizeRegular,
+    fontWeight: typography.weightBold,
+    color: colors.textPrimary,
+    marginBottom: spacing.tiny,
+  },
+  userSwitchEmail: {
+    fontSize: typography.sizeSmall,
+    color: colors.textSecondary,
+  },
+  userSwitchFooter: {
+    fontSize: typography.sizeSmall,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: spacing.medium,
+  },
 });
 
 export default Home;

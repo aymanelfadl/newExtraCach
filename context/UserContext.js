@@ -12,7 +12,7 @@ const USER_DATA_KEY = '@financeApp:userData';
 const VIEWING_AS_KEY = '@financeApp:viewingAs';
 
 // Current date and time from your provided info
-const CURRENT_DATE_TIME = '2025-04-15 15:00:17';
+const CURRENT_DATE_TIME = '2025-04-15 16:04:43';
 const CURRENT_USER_LOGIN = 'aymanelfadl';
 
 export const UserProvider = ({ children }) => {
@@ -21,12 +21,10 @@ export const UserProvider = ({ children }) => {
   const [isOnline, setIsOnline] = useState(true);
   const [viewingAs, setViewingAs] = useState(null);
 
-  // Monitor network status
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
       setIsOnline(state.isConnected && state.isInternetReachable);
     });
-    
     return () => unsubscribe();
   }, []);
 
@@ -44,16 +42,9 @@ export const UserProvider = ({ children }) => {
             emailVerified: authUser.emailVerified,
             lastLoginAt: CURRENT_DATE_TIME,
           };
-          
-          // Save user data to AsyncStorage
           await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
-          
-          // Check if user is viewing as someone else
           const viewingAsData = await AsyncStorage.getItem(VIEWING_AS_KEY);
-          if (viewingAsData) {
-            setViewingAs(JSON.parse(viewingAsData));
-          }
-          
+          if (viewingAsData) setViewingAs(JSON.parse(viewingAsData));
           setUser(userData);
         } else {
           // User is signed out
@@ -69,18 +60,58 @@ export const UserProvider = ({ children }) => {
       }
     });
 
-    // Cleanup subscription
+    const loadOfflineUserData = async () => {
+      try {
+        const userData = await AsyncStorage.getItem(USER_DATA_KEY);
+        if (userData && !user) {
+          setUser(JSON.parse(userData));
+          const viewingAsData = await AsyncStorage.getItem(VIEWING_AS_KEY);
+          if (viewingAsData) setViewingAs(JSON.parse(viewingAsData));
+        }
+      } catch (error) {
+        console.error("Error loading offline user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOfflineUserData();
     return () => unsubscribe();
   }, []);
 
-  // Provide context value
+  const setViewingAsUser = async (targetUser) => {
+    try {
+      if (targetUser) {
+        await AsyncStorage.setItem(VIEWING_AS_KEY, JSON.stringify(targetUser));
+        setViewingAs(targetUser);
+      } else {
+        await AsyncStorage.removeItem(VIEWING_AS_KEY);
+        setViewingAs(null);
+      }
+      return { success: true };
+    } catch (error) {
+      console.error("Error setting viewing as user:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  const canModifyData = () => {
+    if (viewingAs) return false;
+    if (!isOnline && user) return true;
+    return isOnline && user !== null;
+  };
+
   const value = {
     user,
     loading,
     isOnline,
     viewingAs,
+    setViewingAsUser,
+    canModifyData,
     currentDateTime: CURRENT_DATE_TIME,
-    currentUser: CURRENT_USER_LOGIN
+    currentUserLogin: CURRENT_USER_LOGIN,
+    userId: user?.uid || null,
+    networkStatus: isOnline ? "online" : "offline" 
   };
 
   return (
@@ -90,7 +121,6 @@ export const UserProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use the user context
 export const useUser = () => {
   const context = useContext(UserContext);
   if (!context) {
@@ -99,5 +129,4 @@ export const useUser = () => {
   return context;
 };
 
-// Default export
 export default UserContext;

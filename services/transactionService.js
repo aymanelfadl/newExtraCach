@@ -11,7 +11,6 @@ const TRANSACTION_TYPES = {
 };
 
 export const transactionService = {
-  // Add a new transaction (expense or revenue)
   addTransaction: async (transactionData) => {
     try {
       // Get current auth context (which user are we viewing as?)

@@ -16,8 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, typography, spacing, borderRadius, shadows, commonStyles } from '../../styles/theme';
-import { auth } from '../../services/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { authService } from '../../services/index';
 import { useUser } from '../../context/UserContext';
 
 const { width, height } = Dimensions.get('window');
@@ -88,43 +87,33 @@ const LogIn = () => {
       setLoading(true);
       
       if (isLogin) {
-        // Handle login
-        await signInWithEmailAndPassword(auth, email, password);
-        // Auth state change listener in UserContext will handle the rest
+        // Handle login using authService
+        const result = await authService.login(email, password);
+        
+        if (!result.success) {
+          // If login failed, set the error message
+          setErrorMessage(result.error);
+        }
+        // Auth state change listener in UserContext will handle successful login
       } else {
-        // Handle registration
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Handle registration using authService
+        const result = await authService.register(email, password, fullName);
         
-        // Update the user profile with full name
-        await updateProfile(userCredential.user, {
-          displayName: fullName
-        });
-        
-        // Now automatically sign in the user
-        Alert.alert(
-          'Compte créé avec succès',
-          'Bienvenue! Votre compte a été créé avec succès.',
-          [{ text: 'OK' }]
-        );
+        if (result.success) {
+          // Registration successful
+          Alert.alert(
+            'Compte créé avec succès',
+            'Bienvenue! Votre compte a été créé avec succès.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          // If registration failed, set the error message
+          setErrorMessage(result.error);
+        }
       }
     } catch (error) {
       console.error('Authentication error:', error);
-      
-      // Handle specific Firebase auth errors with user-friendly messages
-      switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-          setErrorMessage('Email ou mot de passe incorrect');
-          break;
-        case 'auth/email-already-in-use':
-          setErrorMessage('Cette adresse email est déjà utilisée');
-          break;
-        case 'auth/network-request-failed':
-          setErrorMessage('Problème de connexion réseau. Vérifiez votre connexion Internet.');
-          break;
-        default:
-          setErrorMessage('Une erreur s\'est produite. Veuillez réessayer plus tard.');
-      }
+      setErrorMessage('Une erreur s\'est produite. Veuillez réessayer plus tard.');
     } finally {
       setLoading(false);
     }
@@ -145,7 +134,7 @@ const LogIn = () => {
 
   const getCurrentTime = () => {
     // Using the provided current time
-    return '15:17:18';
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -310,6 +299,7 @@ const LogIn = () => {
 };
 
 const styles = StyleSheet.create({
+  // Styles remain unchanged
   container: {
     flex: 1,
     backgroundColor: colors.background,

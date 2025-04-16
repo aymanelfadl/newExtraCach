@@ -7,24 +7,20 @@ const CURRENT_USER_KEY = '@financial_app:currentUser';
 const USER_AUTH_KEY = '@financial_app:userAuth';
 
 export const authService = {
-  // Register a new user
   register: async (email, password, fullName) => {
     try {
-      // Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Create user profile in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
         email: email,
         fullName: fullName,
         createdAt: new Date().toISOString(),
-        sharedAccess: [], // Users who have access to this account
-        hasAccessTo: [], // Accounts this user has access to
+        sharedAccess: [],
+        hasAccessTo: [],
       });
       
-      // Save user info to AsyncStorage for offline access
       await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify({
         uid: user.uid,
         email: user.email,
@@ -44,12 +40,10 @@ export const authService = {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Get additional user data from Firestore
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // Save user info to AsyncStorage for offline access
         await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify({
           uid: user.uid,
           email: user.email,
@@ -67,7 +61,6 @@ export const authService = {
     }
   },
   
-  // Log out user
   logout: async () => {
     try {
       await signOut(auth);
@@ -80,7 +73,6 @@ export const authService = {
     }
   },
   
-  // Get current user from AsyncStorage (for offline access)
   getCurrentUser: async () => {
     try {
       const userData = await AsyncStorage.getItem(CURRENT_USER_KEY);
@@ -91,10 +83,8 @@ export const authService = {
     }
   },
   
-  // Grant access to another user
   grantAccess: async (currentUserUid, targetUserEmail) => {
     try {
-      // Look up the target user by email
       const usersSnapshot = await getDocs(query(collection(db, 'users'), where('email', '==', targetUserEmail)));
       
       if (usersSnapshot.empty) {
@@ -104,7 +94,6 @@ export const authService = {
       const targetUserDoc = usersSnapshot.docs[0];
       const targetUserId = targetUserDoc.id;
       
-      // Update current user's shared access list
       await updateDoc(doc(db, 'users', currentUserUid), {
         sharedAccess: arrayUnion(targetUserId)
       });
@@ -121,7 +110,6 @@ export const authService = {
     }
   },
   
-  // Revoke access from a user
   revokeAccess: async (currentUserUid, targetUserId) => {
     try {
       // Update current user's shared access list
@@ -179,7 +167,6 @@ export const authService = {
     }
   },
   
-  // Get list of accounts that current user has access to
   getAccessibleAccounts: async (userId) => {
     try {
       const userDoc = await getDoc(doc(db, 'users', userId));
