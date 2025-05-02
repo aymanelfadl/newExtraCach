@@ -99,6 +99,102 @@ export const transactionService = {
     }
   },
 
+  updateTransaction: async (id, transactionData) => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        return { success: false, error: "Utilisateur non connecté" };
+      }
+      
+      const networkState = await NetInfo.fetch();
+      const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      
+      // Add updatedAt timestamp to the transaction data
+      const updateData = {
+        ...transactionData,
+        updatedAt: new Date().toISOString(),
+        lastUpdatedBy: userId
+      };
+      
+      if (isOnline) {
+        // Online update
+        const docRef = doc(db, 'transactions', id);
+        await updateDoc(docRef, updateData);
+        
+        return { 
+          success: true, 
+          transaction: { 
+            ...transactionData, 
+            id,
+            updatedAt: updateData.updatedAt
+          } 
+        };
+      } else {
+        // Offline update logic
+        const offlineTransactionsJson = await AsyncStorage.getItem(OFFLINE_TRANSACTIONS_KEY);
+        const offlineTransactions = offlineTransactionsJson ? JSON.parse(offlineTransactionsJson) : [];
+        
+        // Check if this is an offline transaction
+        const isOfflineTransaction = id.startsWith('offline_');
+        
+        if (isOfflineTransaction) {
+          // Update existing offline transaction
+          const updatedOfflineTransactions = offlineTransactions.map(transaction => {
+            if (transaction.id === id) {
+              return { 
+                ...transaction, 
+                ...transactionData,
+                updatedAt: updateData.updatedAt
+              };
+            }
+            return transaction;
+          });
+          
+          await AsyncStorage.setItem(OFFLINE_TRANSACTIONS_KEY, JSON.stringify(updatedOfflineTransactions));
+          
+          return { 
+            success: true, 
+            transaction: { 
+              ...transactionData, 
+              id, 
+              updatedAt: updateData.updatedAt,
+              isOffline: true 
+            }, 
+            isOffline: true 
+          };
+        } else {
+          // Queue update for sync later
+          const offlineTransaction = {
+            id: `offline_update_${Date.now()}`,
+            originalId: id,
+            data: transactionData,
+            userId,
+            updatedAt: updateData.updatedAt,
+            pendingAction: 'update',
+            isOffline: true
+          };
+          
+          offlineTransactions.push(offlineTransaction);
+          await AsyncStorage.setItem(OFFLINE_TRANSACTIONS_KEY, JSON.stringify(offlineTransactions));
+          
+          return { 
+            success: true, 
+            transaction: { 
+              ...transactionData, 
+              id, 
+              updatedAt: updateData.updatedAt,
+              isOffline: true 
+            }, 
+            isOffline: true 
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
   deleteTransaction: async (id) => {
     try {
       const userId = await getCurrentUserId();
