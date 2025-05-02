@@ -133,7 +133,6 @@ const LogIn = () => {
   };
 
   const getCurrentTime = () => {
-    // Using the provided current time
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -143,154 +142,139 @@ const LogIn = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidContainer}
       >
-        <ScrollView
+        <ScrollView 
           contentContainerStyle={styles.scrollView}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.headerContainer}>
-            <View style={styles.logoContainer}>
-              <Icon name="wallet-outline" size={48} color={colors.primary} />
-            </View>
-            <Text style={styles.appName}>Finance App</Text>
-            <Text style={styles.currentTime}>{getCurrentTime()}</Text>
-          </View>
+          <View style={styles.contentCenter}>
+            <View style={styles.formContainer}>
+              <Text style={styles.welcomeText}>
+                {isLogin ? 'Bienvenue !' : 'Créer un compte'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {isLogin 
+                  ? 'Connectez-vous pour accéder à vos finances' 
+                  : 'Inscrivez-vous pour commencer à gérer vos finances'}
+              </Text>
 
-          <View style={styles.formContainer}>
-            <Text style={styles.welcomeText}>
-              {isLogin ? 'Bienvenue !' : 'Créer un compte'}
-            </Text>
-            <Text style={styles.subtitle}>
-              {isLogin 
-                ? 'Connectez-vous pour accéder à vos finances' 
-                : 'Inscrivez-vous pour commencer à gérer vos finances'}
-            </Text>
+              {/* Error message display */}
+              {errorMessage ? (
+                <View style={styles.errorContainer}>
+                  <Icon name="alert-circle" size={16} color={colors.error} />
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
 
-            {/* Error message display */}
-            {errorMessage ? (
-              <View style={styles.errorContainer}>
-                <Icon name="alert-circle" size={16} color={colors.error} />
-                <Text style={styles.errorText}>{errorMessage}</Text>
-              </View>
-            ) : null}
+              {/* Registration fields */}
+              {!isLogin && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Nom complet</Text>
+                  <View style={styles.inputContainer}>
+                    <Icon name="account" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Votre nom complet"
+                      placeholderTextColor={colors.textDisabled}
+                      value={fullName}
+                      onChangeText={setFullName}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                </View>
+              )}
 
-            {/* Registration fields */}
-            {!isLogin && (
+              {/* Email field */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Nom complet</Text>
+                <Text style={styles.inputLabel}>Email</Text>
                 <View style={styles.inputContainer}>
-                  <Icon name="account" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                  <Icon name="email" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Votre nom complet"
+                    placeholder="votre@email.com"
                     placeholderTextColor={colors.textDisabled}
-                    value={fullName}
-                    onChangeText={setFullName}
-                    autoCapitalize="words"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
                   />
                 </View>
               </View>
-            )}
 
-            {/* Email field */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <View style={styles.inputContainer}>
-                <Icon name="email" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="votre@email.com"
-                  placeholderTextColor={colors.textDisabled}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-
-            {/* Password field */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Mot de passe</Text>
-              <View style={styles.inputContainer}>
-                <Icon name="lock" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Votre mot de passe"
-                  placeholderTextColor={colors.textDisabled}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!passwordVisible}
-                />
-                <TouchableOpacity onPress={togglePasswordVisibility} style={styles.visibilityIcon}>
-                  <Icon 
-                    name={passwordVisible ? "eye-off" : "eye"} 
-                    size={20} 
-                    color={colors.textSecondary} 
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Confirm Password field (for registration) */}
-            {!isLogin && (
+              {/* Password field */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Confirmer le mot de passe</Text>
+                <Text style={styles.inputLabel}>Mot de passe</Text>
                 <View style={styles.inputContainer}>
-                  <Icon name="lock-check" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                  <Icon name="lock" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Confirmez votre mot de passe"
+                    placeholder="Votre mot de passe"
                     placeholderTextColor={colors.textDisabled}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!confirmPasswordVisible}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!passwordVisible}
                   />
-                  <TouchableOpacity onPress={toggleConfirmPasswordVisibility} style={styles.visibilityIcon}>
+                  <TouchableOpacity onPress={togglePasswordVisibility} style={styles.visibilityIcon}>
                     <Icon 
-                      name={confirmPasswordVisible ? "eye-off" : "eye"} 
+                      name={passwordVisible ? "eye-off" : "eye"} 
                       size={20} 
                       color={colors.textSecondary} 
                     />
                   </TouchableOpacity>
                 </View>
               </View>
-            )}
 
-            {/* Submit Button */}
-            <TouchableOpacity 
-              style={styles.submitButton}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {isLogin ? 'Se connecter' : 'S\'inscrire'}
-                </Text>
+              {/* Confirm Password field (for registration) */}
+              {!isLogin && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Confirmer le mot de passe</Text>
+                  <View style={styles.inputContainer}>
+                    <Icon name="lock-check" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Confirmez votre mot de passe"
+                      placeholderTextColor={colors.textDisabled}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      secureTextEntry={!confirmPasswordVisible}
+                    />
+                    <TouchableOpacity onPress={toggleConfirmPasswordVisibility} style={styles.visibilityIcon}>
+                      <Icon 
+                        name={confirmPasswordVisible ? "eye-off" : "eye"} 
+                        size={20} 
+                        color={colors.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
               )}
-            </TouchableOpacity>
 
-            {/* Toggle between login and register */}
-            <TouchableOpacity onPress={toggleAuthMode} style={styles.toggleContainer}>
-              <Text style={styles.toggleText}>
-                {isLogin 
-                  ? 'Pas encore de compte? ' 
-                  : 'Déjà un compte? '}
-                <Text style={styles.toggleTextHighlight}>
-                  {isLogin ? 'S\'inscrire' : 'Se connecter'}
+              {/* Submit Button */}
+              <TouchableOpacity 
+                style={styles.submitButton}
+                onPress={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={styles.submitButtonText}>
+                    {isLogin ? 'Se connecter' : 'S\'inscrire'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              {/* Toggle between login and register */}
+              <TouchableOpacity onPress={toggleAuthMode} style={styles.toggleContainer}>
+                <Text style={styles.toggleText}>
+                  {isLogin 
+                    ? 'Pas encore de compte? ' 
+                    : 'Déjà un compte? '}
+                  <Text style={styles.toggleTextHighlight}>
+                    {isLogin ? 'S\'inscrire' : 'Se connecter'}
+                  </Text>
                 </Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footerContainer}>
-            <Text style={styles.footerText}>
-              © 2025 Finance App • v1.0.0
-            </Text>
-            <Text style={styles.footerText}>
-              2025-04-15
-            </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -299,18 +283,26 @@ const LogIn = () => {
 };
 
 const styles = StyleSheet.create({
-  // Styles remain unchanged
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
   keyboardAvoidContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
   scrollView: {
     flexGrow: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: spacing.large,
+  },
+  contentCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   headerContainer: {
     alignItems: 'center',
@@ -342,6 +334,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.large,
     padding: spacing.large,
     width: '100%',
+    alignSelf: 'center',
     ...shadows.medium,
   },
   welcomeText: {

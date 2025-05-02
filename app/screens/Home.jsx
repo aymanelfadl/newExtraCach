@@ -43,14 +43,47 @@ const Home = () => {
     setRefreshing(true);
     try {
       const userId = effectiveUser?.uid;
-      const { success, transactions, error } = await transactionService.getTransactions(userId); // <-- pass userId if needed
+      const { success, transactions, error } = await transactionService.getTransactions({ 
+        // Pass userId if the service expects it, or don't include it if it uses getCurrentUserId internally
+        // userId: userId 
+      });
+      
       if (!success) {
         Alert.alert("Erreur", "Impossible de récupérer les transactions.\n" + (error || ''));
         return;
       }
-      const todayTxs = transactions.filter(
-        t => t.dateAdded === todayDate
-      );
+      
+      console.log("Total transactions fetched:", transactions.length);
+      console.log("Today's date for filtering:", todayDate);
+      
+      // Add debugging to check date formats
+      if (transactions.length > 0) {
+        console.log("Sample transaction dates:", 
+          transactions.slice(0, 3).map(t => ({ 
+            dateAdded: t.dateAdded, 
+            date: t.date,
+            type: t.type,
+            isExpense: t.type === 'expense' ? true : false
+          }))
+        );
+      }
+      
+      // Improved filter to handle both dateAdded and date fields
+      const todayTxs = transactions.filter(t => {
+        const transactionDate = t.dateAdded || t.date;
+        return transactionDate === todayDate;
+      }).map(transaction => {
+        // Ensure isExpense is correctly set based on transaction type
+        return {
+          ...transaction,
+          isExpense: transaction.type === 'expense', // This will be true for expenses, false for revenues
+          dateAdded: transaction.dateAdded || transaction.date, // Ensure dateAdded is available
+          spends: transaction.spends || transaction.amount // Ensure spends property exists
+        };
+      });
+      
+      console.log("Filtered today's transactions:", todayTxs.length);
+      
       todayTxs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setRecentTransactions(todayTxs);
     } catch (e) {
@@ -117,12 +150,11 @@ const Home = () => {
     }
   };
 
-  // User switch handlers
   const handleOpenUserSwitch = () => setUserSwitchModalVisible(true);
 
   const handleSelectUser = async (user) => {
     try {
-      await setViewingAsUser(user); // <-- 4. Use context setter
+      await setViewingAsUser(user);
       if (user) {
         Alert.alert("Compte utilisateur changé", `Vous consultez maintenant le compte de ${user.fullName}`);
       } else {
@@ -136,9 +168,15 @@ const Home = () => {
     }
   };
 
-  // Calculate today's summary
-  const todayIncome = recentTransactions.filter(t => !t.isExpense).reduce((sum, t) => sum + (Number(t.spends) || 0), 0);
-  const todayExpenses = recentTransactions.filter(t => t.isExpense).reduce((sum, t) => sum + (Number(t.spends) || 0), 0);
+  // Calculate today's summary - Make sure we're using the right property to determine if it's an expense
+  const todayIncome = recentTransactions
+    .filter(t => !t.isExpense && t.type === 'revenue')
+    .reduce((sum, t) => sum + (Number(t.spends || t.amount) || 0), 0);
+    
+  const todayExpenses = recentTransactions
+    .filter(t => t.isExpense || t.type === 'expense')
+    .reduce((sum, t) => sum + (Number(t.spends || t.amount) || 0), 0);
+    
   const todayBalance = todayIncome - todayExpenses;
 
   // Quick action buttons (disable if viewing as another user)
@@ -294,14 +332,6 @@ const Home = () => {
               </View>
             ))
           )}
-        </View>
-        {/* User info */}
-        <View style={styles.userInfo}>
-          <Text style={styles.userInfoText}>
-            Connecté en tant que <Text style={styles.username}>
-              {viewingAs ? `${user?.username} (vue: ${viewingAs.fullName})` : user?.username}
-            </Text>
-          </Text>
         </View>
       </ScrollView>
       {/* Expense and Revenue Modals */}

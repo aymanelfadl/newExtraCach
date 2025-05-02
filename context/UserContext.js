@@ -74,7 +74,7 @@ export const UserProvider = ({ children }) => {
 
   const setViewingAsUser = async (targetUser) => {
     try {
-      if (targetUser) {
+      if (targetUser){
         await AsyncStorage.setItem(VIEWING_AS_KEY, JSON.stringify(targetUser));
         setViewingAs(targetUser);
       } else {

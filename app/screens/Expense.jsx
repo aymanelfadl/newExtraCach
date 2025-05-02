@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert, RefreshControl } from 'react-native';
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { colors, spacing, borderRadius, shadows, commonStyles } from '../../styles/theme';
 
@@ -7,18 +7,18 @@ import AddExpense from '../../components/AddExpense';
 import Header from '../../components/Header';
 import CardList from '../../components/CardList';
 import { useUser } from '../../context/UserContext';
-import { transactionService, useNetworkStatus } from '../../services/index';
+import { transactionService } from '../../services/transactionService';
 
 const Expense = () => {
   const { isOnline: userContextOnline } = useUser();
-  const serviceOnline = useNetworkStatus();
-  const isOnline = userContextOnline && serviceOnline;
+  const isOnline = userContextOnline;
   
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   
   // Load expenses when component mounts
@@ -27,19 +27,29 @@ const Expense = () => {
   }, []);
   
   // Load expenses from service
-  const loadExpenses = async () => {
+  const loadExpenses = async (showRefreshing = false) => {
     try {
-      setIsLoading(true);
+      if (showRefreshing) {
+        setRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
       
       // Get expense transactions from the transaction service
       const result = await transactionService.getTransactions({ 
         type: 'expense',
-        // You can add other filters here if needed
       });
       
       if (result.success) {
-        setExpenses(result.transactions);
+        // Format transactions for CardList component - ensure dateAdded and isExpense are set
+        const formattedExpenses = result.transactions.map(transaction => ({
+          ...transaction,
+          dateAdded: transaction.dateAdded || transaction.date, // Ensure dateAdded is available
+          isExpense: true, // Explicitly mark all items as expenses for proper styling
+          spends: transaction.spends || transaction.amount // Ensure spends property exists
+        }));
+        setExpenses(formattedExpenses);
       } else {
         setError(result.error || 'Error loading expenses');
         
@@ -56,7 +66,13 @@ const Expense = () => {
       setError('Une erreur s\'est produite lors du chargement des dépenses');
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
+  };
+  
+  // Handle pull to refresh
+  const onRefresh = () => {
+    loadExpenses(true);
   };
   
   // Handle search functionality
@@ -144,6 +160,8 @@ const Expense = () => {
   
   // Handle save expense
   const handleSaveExpense = async (expenseData) => {
+    setModalVisible(false);
+    setEditingItem(null);
     try {
       let result;
       
@@ -159,7 +177,11 @@ const Expense = () => {
         if (result.success) {
           // Update local state with updated transaction
           setExpenses(expenses.map(item => 
-            item.id === editingItem.id ? result.transaction : item
+            item.id === editingItem.id ? {
+              ...result.transaction,
+              dateAdded: expenseData.dateAdded, // Ensure dateAdded is available for UI
+              isExpense: true // Explicitly mark as an expense for UI
+            } : item
           ));
           console.log(`Expense updated: ${editingItem.id}`);
         }
@@ -168,14 +190,22 @@ const Expense = () => {
         result = await transactionService.addTransaction({
           description: expenseData.description,
           amount: expenseData.spends, // Convert component field to service field
-          date: expenseData.dateAdded, // Convert component field to service field
+          date: expenseData.dateAdded, // Ensure the date is in DD/MM/YYYY format from AddExpense
           type: 'expense',
           time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
         });
         
         if (result.success) {
+          // Make sure to include dateAdded for UI display
+          const newTransaction = {
+            ...result.transaction,
+            dateAdded: expenseData.dateAdded, // Explicitly set dateAdded for the CardList component
+            spends: expenseData.spends, // Ensure spends is available for UI
+            isExpense: true // Explicitly mark as an expense for UI color/sign
+          };
+          
           // Add to local state
-          setExpenses([result.transaction, ...expenses]);
+          setExpenses([newTransaction, ...expenses]);
           console.log('New expense added');
         }
       }
@@ -190,7 +220,10 @@ const Expense = () => {
               ...editingItem,
               description: expenseData.description,
               amount: expenseData.spends,
+              spends: expenseData.spends, // Include spends for UI
               date: expenseData.dateAdded,
+              dateAdded: expenseData.dateAdded, // Include dateAdded for UI
+              isExpense: true, // Mark as expense for UI
               isOffline: true
             };
             setExpenses(expenses.map(item => 
@@ -202,8 +235,11 @@ const Expense = () => {
               id: `temp_${Date.now()}`,
               description: expenseData.description,
               amount: expenseData.spends,
+              spends: expenseData.spends, // Include spends for UI
               date: expenseData.dateAdded,
+              dateAdded: expenseData.dateAdded, // Include dateAdded for UI
               type: 'expense',
+              isExpense: true, // Mark as expense for UI color/sign
               isOffline: true,
               time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
             };
@@ -222,9 +258,6 @@ const Expense = () => {
     } catch (error) {
       console.error('Error saving expense:', error);
       Alert.alert("Erreur", "Une erreur s'est produite lors de la sauvegarde");
-    } finally {
-      setModalVisible(false);
-      setEditingItem(null);
     }
   };
   
@@ -275,6 +308,14 @@ const Expense = () => {
         onEditPress={handleEditPress}
         emptyMessage="Aucune dépense trouvée"
         isLoading={isLoading}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.expense]}
+            tintColor={colors.expense}
+          />
+        }
       />
       
       {/* Add expense button */}

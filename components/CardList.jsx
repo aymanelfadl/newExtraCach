@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -11,7 +11,6 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
 
-// Get screen dimensions
 const { width, height } = Dimensions.get('window');
 
 const CardList = ({ 
@@ -20,7 +19,9 @@ const CardList = ({
   onCardPress,
   onDeletePress,
   onEditPress,
-  emptyMessage = "Aucun élément trouvé"
+  emptyMessage = "Aucun élément trouvé",
+  isLoading = false,
+  refreshControl
 }) => {
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -50,7 +51,6 @@ const CardList = ({
   };
 
   const renderItem = ({ item }) => {
-    // Determine color based on transaction type
     const amountColor = item.isExpense ? colors.expense : colors.income;
     const amountPrefix = item.isExpense ? '-' : '+';
 
@@ -80,15 +80,17 @@ const CardList = ({
         numColumns={numColumns}
         columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : null}
         contentContainerStyle={styles.listContainer}
+        refreshControl={refreshControl}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Icon name="currency-usd-off" size={50} color={colors.textDisabled} />
-            <Text style={styles.emptyMessage}>{emptyMessage}</Text>
+            <Text style={styles.emptyMessage}>
+              {isLoading ? "Chargement..." : emptyMessage}
+            </Text>
           </View>
         }
       />
 
-      {/* Action Menu Modal */}
       <Modal
         transparent={true}
         visible={actionMenuVisible}
@@ -188,7 +190,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.medium,
     fontSize: typography.sizeRegular,
   },
-  // Action menu styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

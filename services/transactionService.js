@@ -8,7 +8,6 @@ const CURRENT_USER_KEY = '@financial_app:currentUser';
 const VIEWING_AS_KEY = '@financial_app:viewingAs';
 const OFFLINE_TRANSACTIONS_KEY = '@financial_app:offlineTransactions';
 
-// Helper to get the correct userId depending on "view as"
 const getCurrentUserId = async () => {
   const viewingAs = await AsyncStorage.getItem(VIEWING_AS_KEY);
   if (viewingAs) {
@@ -52,7 +51,7 @@ export const transactionService = {
     }
   },
 
-  getTransactions: async () => {
+  getTransactions: async (filters = {}) => {
     try {
       const userId = await getCurrentUserId();
       if (!userId) return { success: false, error: "Utilisateur non connecté" };
@@ -80,10 +79,72 @@ export const transactionService = {
           transaction.pendingAction !== 'delete'
         );
       }
-      const combinedTransactions = [...onlineTransactions, ...offlineTransactions];
+      
+      // Combine and sort transactions
+      let combinedTransactions = [...onlineTransactions, ...offlineTransactions];
+      
+      // Apply filters if provided
+      if (filters.type) {
+        combinedTransactions = combinedTransactions.filter(
+          transaction => transaction.type === filters.type
+        );
+      }
+      
+      // Sort by createdAt date (most recent first)
       combinedTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
       return { success: true, transactions: combinedTransactions, isPartiallyOffline: !isOnline };
     } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  deleteTransaction: async (id) => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        return { success: false, error: "Utilisateur non connecté" };
+      }
+      
+      const networkState = await NetInfo.fetch();
+      const isOnline = networkState.isConnected && networkState.isInternetReachable;
+
+      if (isOnline) {
+        // Online deletion
+        const docRef = doc(db, 'transactions', id);
+        await deleteDoc(docRef);
+        return { success: true };
+      } else {
+        // Offline deletion logic
+        const offlineTransactionsJson = await AsyncStorage.getItem(OFFLINE_TRANSACTIONS_KEY);
+        const offlineTransactions = offlineTransactionsJson ? JSON.parse(offlineTransactionsJson) : [];
+        
+        // Check if this is an offline transaction
+        const isOfflineTransaction = id.startsWith('offline_');
+        
+        if (isOfflineTransaction) {
+          // Remove the offline transaction from storage
+          const filteredTransactions = offlineTransactions.filter(transaction => transaction.id !== id);
+          await AsyncStorage.setItem(OFFLINE_TRANSACTIONS_KEY, JSON.stringify(filteredTransactions));
+        } else {
+          // Queue delete for sync later
+          const offlineTransaction = {
+            id: `offline_delete_${Date.now()}`,
+            originalId: id,
+            userId,
+            updatedAt: new Date().toISOString(),
+            pendingAction: 'delete',
+            isOffline: true
+          };
+          
+          offlineTransactions.push(offlineTransaction);
+          await AsyncStorage.setItem(OFFLINE_TRANSACTIONS_KEY, JSON.stringify(offlineTransactions));
+        }
+        
+        return { success: true, isOffline: true };
+      }
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
       return { success: false, error: error.message };
     }
   },
