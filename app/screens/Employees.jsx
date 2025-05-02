@@ -252,11 +252,6 @@ export default function Employees() {
                 {item.balance > 0 ? '+' : item.balance < 0 ? '' : ''}{item.balance || 0} MAD
               </Text>
               <View style={styles.actionsRow}>
-                <View style={styles.expenseBadge}>
-                  <Text style={styles.expenseCount}>
-                    {item.expenses?.length || 0} dép.
-                  </Text>
-                </View>
                 <TouchableOpacity 
                   onPress={() => handleDeleteEmployee(item.id)}
                   style={styles.deleteButton}

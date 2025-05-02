@@ -11,9 +11,11 @@ import {
   TextInput,
   RefreshControl,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Platform
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { employeeService } from '../services';
 import { useUser } from '../context/UserContext';
 import { colors } from '../styles/theme';
@@ -29,6 +31,12 @@ export default function EmployeeDetail({ route, navigation }) {
     startDate: '',
     endDate: '',
     isActive: false
+  });
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [tempDates, setTempDates] = useState({
+    startDate: null,
+    endDate: null
   });
 
   // Format date helper function
@@ -56,6 +64,7 @@ export default function EmployeeDetail({ route, navigation }) {
     amount: '',
     date: formatDate(new Date())
   });
+  const [showPaymentDatePicker, setShowPaymentDatePicker] = useState(false);
 
   const { isOnline } = useUser();
 
@@ -99,7 +108,18 @@ export default function EmployeeDetail({ route, navigation }) {
       amount: '',
       date: formatDate(new Date())
     });
+    setShowPaymentDatePicker(false);
     setPaymentModalVisible(true);
+  };
+
+  const onPaymentDateChange = (event, selectedDate) => {
+    setShowPaymentDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setNewPayment({
+        ...newPayment,
+        date: formatDate(selectedDate)
+      });
+    }
   };
 
   const handleSavePayment = async () => {
@@ -128,7 +148,7 @@ export default function EmployeeDetail({ route, navigation }) {
         if (employee) {
           const payments = employee.payments || [];
           const updatedEmployee = {
-            ...employee,
+            ...employee, 
             payments: [...payments, result.payment],
             balance: result.updatedBalance !== undefined ? result.updatedBalance : (employee.balance || 0) + amount,
             lastPayment: result.lastPayment || newPayment.date
@@ -159,12 +179,16 @@ export default function EmployeeDetail({ route, navigation }) {
       endDate: '',
       isActive: false
     });
+    setTempDates({
+      startDate: null,
+      endDate: null
+    });
   };
 
   const handleApplyFilter = () => {
     // Validate dates
-    const startDate = parseDate(dateFilter.startDate);
-    const endDate = parseDate(dateFilter.endDate);
+    const startDate = dateFilter.startDate ? parseDate(dateFilter.startDate) : null;
+    const endDate = dateFilter.endDate ? parseDate(dateFilter.endDate) : null;
     
     if (dateFilter.startDate && !startDate) {
       Alert.alert('Erreur', 'Date de début invalide. Utilisez le format JJ/MM/AAAA');
@@ -187,7 +211,67 @@ export default function EmployeeDetail({ route, navigation }) {
     });
     setDateFilterModalVisible(false);
   };
+
+  const onStartDateChange = (event, selectedDate) => {
+    setShowStartDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setTempDates({...tempDates, startDate: selectedDate});
+      setDateFilter({
+        ...dateFilter,
+        startDate: formatDate(selectedDate)
+      });
+    }
+  };
+
+  const onEndDateChange = (event, selectedDate) => {
+    setShowEndDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setTempDates({...tempDates, endDate: selectedDate});
+      setDateFilter({
+        ...dateFilter,
+        endDate: formatDate(selectedDate)
+      });
+    }
+  };
+
+  // Date filtering logic enhancements
+  const applyDateFilter = (payments) => {
+    if (!dateFilter.isActive) return payments;
+    
+    return payments.filter(payment => {
+      const paymentDate = parseDate(payment.date);
+      const startDate = dateFilter.startDate ? parseDate(dateFilter.startDate) : null;
+      const endDate = dateFilter.endDate ? parseDate(dateFilter.endDate) : null;
+      
+      if (!paymentDate) return true; // Include if date can't be parsed
+      
+      // Check start date
+      if (startDate) {
+        startDate.setHours(0, 0, 0, 0); // Start of day
+        if (paymentDate < startDate) return false;
+      }
+      
+      // Check end date
+      if (endDate) {
+        endDate.setHours(23, 59, 59, 999); // End of day
+        if (paymentDate > endDate) return false;
+      }
+      
+      return true;
+    });
+  };
   
+  // Sort payments by date (most recent first) and apply date filter
+  const sortedPayments = [...(employee?.payments || [])]
+    .sort((a, b) => {
+      const dateA = new Date(a.createdAt || parseDate(a.date) || 0);
+      const dateB = new Date(b.createdAt || parseDate(b.date) || 0);
+      return dateB - dateA; // Descending order (newest first)
+    });
+
+  // Apply filters
+  const filteredPayments = applyDateFilter(sortedPayments);
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -211,27 +295,6 @@ export default function EmployeeDetail({ route, navigation }) {
       </View>
     );
   }
-  
-  // Sort payments by date (most recent first) and apply date filter if active
-  const sortedPayments = [...(employee.payments || [])]
-    .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
-    .filter(payment => {
-      if (!dateFilter.isActive) return true;
-      
-      const paymentDate = parseDate(payment.date);
-      const startDate = dateFilter.startDate ? parseDate(dateFilter.startDate) : null;
-      const endDate = dateFilter.endDate ? parseDate(dateFilter.endDate) : null;
-      
-      if (!paymentDate) return true;
-      if (startDate && paymentDate < startDate) return false;
-      if (endDate) {
-        // Set end date to end of day
-        endDate.setHours(23, 59, 59, 999);
-        if (paymentDate > endDate) return false;
-      }
-      
-      return true;
-    });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -260,57 +323,30 @@ export default function EmployeeDetail({ route, navigation }) {
           />
         }
       >
-        {/* Add Payment Button */}
-        <View style={styles.actionContainer}>
-          <TouchableOpacity 
-            style={styles.addPaymentButton}
-            onPress={handleAddPayment}
-          >
-            <Icon name="cash-plus" size={20} color={colors.white} />
-            <Text style={styles.addPaymentButtonText}>Ajouter un paiement</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Date Filter Button */}
-        <TouchableOpacity 
-          style={[styles.filterButton, dateFilter.isActive && styles.filterActiveButton]}
-          onPress={() => setDateFilterModalVisible(true)}
-        >
-          <Icon 
-            name="calendar-filter" 
-            size={18} 
-            color={dateFilter.isActive ? colors.white : colors.primary} 
-          />
-          <Text 
-            style={[
-              styles.filterButtonText, 
-              dateFilter.isActive && styles.filterActiveText
-            ]}
-          >
-            {dateFilter.isActive 
-              ? `Filtré ${dateFilter.startDate ? `Du: ${dateFilter.startDate}` : ''} ${dateFilter.endDate ? `Au: ${dateFilter.endDate}` : ''}`
-              : 'Filtrer par date'}
-          </Text>
-          
-          {dateFilter.isActive && (
+        {/* Date Filter Status - Only show if filter is active */}
+        {dateFilter.isActive && (
+          <View style={styles.activeFilterContainer}>
+            <Text style={styles.activeFilterText}>
+              Filtré {dateFilter.startDate ? `Du: ${dateFilter.startDate}` : ''} {dateFilter.endDate ? `Au: ${dateFilter.endDate}` : ''}
+            </Text>
             <TouchableOpacity 
               style={styles.clearFilterButton}
               onPress={handleResetFilter}
             >
               <Icon name="close-circle" size={16} color={colors.white} />
             </TouchableOpacity>
-          )}
-        </TouchableOpacity>
+          </View>
+        )}
         
         {/* Payments list header */}
         <Text style={styles.listHeaderText}>
-          Historique des paiements ({sortedPayments.length})
+          Historique des paiements ({filteredPayments.length})
         </Text>
         
         {/* List of payments */}
         <View style={styles.listContainer}>
-          {sortedPayments.length > 0 ? (
-            sortedPayments.map((payment, index) => (
+          {filteredPayments.length > 0 ? (
+            filteredPayments.map((payment, index) => (
               <View key={payment.id || index} style={styles.paymentItem}>
                 <View style={styles.paymentInfo}>
                   <Text style={styles.paymentDescription}>{payment.description}</Text>
@@ -330,6 +366,22 @@ export default function EmployeeDetail({ route, navigation }) {
           )}
         </View>
       </ScrollView>
+      
+      {/* Circular Add Payment Button (Fixed position) */}
+      <TouchableOpacity 
+        style={styles.addPaymentButtonCircle}
+        onPress={handleAddPayment}
+      >
+        <Icon name="cash-plus" size={24} color={colors.white} />
+      </TouchableOpacity>
+      
+      {/* Circular Filter Button (Fixed position) */}
+      <TouchableOpacity 
+        style={[styles.filterButtonCircle, dateFilter.isActive && styles.filterActiveButtonCircle]}
+        onPress={() => setDateFilterModalVisible(true)}
+      >
+        <Icon name="calendar" size={24} color={dateFilter.isActive ? colors.white : colors.primary} />
+      </TouchableOpacity>
       
       {/* Add Payment Modal */}
       <Modal
@@ -366,13 +418,31 @@ export default function EmployeeDetail({ route, navigation }) {
               />
               
               <Text style={styles.inputLabel}>Date</Text>
-              <TextInput
-                style={styles.textInput}
-                value={newPayment.date}
-                onChangeText={(text) => setNewPayment({...newPayment, date: text})}
-                placeholder="DD/MM/YYYY"
-                editable={false}
-              />
+              <View style={styles.dateInputContainer}>
+                <TextInput
+                  style={[styles.textInput, styles.dateInput]}
+                  value={newPayment.date}
+                  onChangeText={(text) => setNewPayment({...newPayment, date: text})}
+                  placeholder="DD/MM/YYYY"
+                  editable={false}
+                />
+                <TouchableOpacity 
+                  style={styles.calendarButton}
+                  onPress={() => setShowPaymentDatePicker(true)}
+                >
+                  <Icon name="calendar" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              
+              {showPaymentDatePicker && (
+                <DateTimePicker
+                  testID="paymentDatePicker"
+                  value={parseDate(newPayment.date) || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={onPaymentDateChange}
+                />
+              )}
               
               <View style={styles.modalActions}>
                 <TouchableOpacity 
@@ -412,20 +482,56 @@ export default function EmployeeDetail({ route, navigation }) {
             
             <View style={styles.modalBody}>
               <Text style={styles.inputLabel}>Date de début (JJ/MM/AAAA)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={dateFilter.startDate}
-                onChangeText={(text) => setDateFilter({...dateFilter, startDate: text})}
-                placeholder="JJ/MM/AAAA"
-              />
+              <View style={styles.dateInputContainer}>
+                <TextInput
+                  style={[styles.textInput, styles.dateInput]}
+                  value={dateFilter.startDate}
+                  onChangeText={(text) => setDateFilter({...dateFilter, startDate: text})}
+                  placeholder="JJ/MM/AAAA"
+                />
+                <TouchableOpacity 
+                  style={styles.calendarButton}
+                  onPress={() => setShowStartDatePicker(true)}
+                >
+                  <Icon name="calendar" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              
+              {showStartDatePicker && (
+                <DateTimePicker
+                  testID="startDatePicker"
+                  value={tempDates.startDate || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={onStartDateChange}
+                />
+              )}
               
               <Text style={styles.inputLabel}>Date de fin (JJ/MM/AAAA)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={dateFilter.endDate}
-                onChangeText={(text) => setDateFilter({...dateFilter, endDate: text})}
-                placeholder="JJ/MM/AAAA"
-              />
+              <View style={styles.dateInputContainer}>
+                <TextInput
+                  style={[styles.textInput, styles.dateInput]}
+                  value={dateFilter.endDate}
+                  onChangeText={(text) => setDateFilter({...dateFilter, endDate: text})}
+                  placeholder="JJ/MM/AAAA"
+                />
+                <TouchableOpacity 
+                  style={styles.calendarButton}
+                  onPress={() => setShowEndDatePicker(true)}
+                >
+                  <Icon name="calendar" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              
+              {showEndDatePicker && (
+                <DateTimePicker
+                  testID="endDatePicker"
+                  value={tempDates.endDate || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={onEndDateChange}
+                />
+              )}
               
               <View style={styles.modalActions}>
                 <TouchableOpacity 
@@ -516,44 +622,19 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: 'bold',
   },
-  actionContainer: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  addPaymentButton: {
+  activeFilterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    gap: 8,
-  },
-  addPaymentButtonText: {
-    color: colors.white,
-    fontWeight: 'bold',
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.lightGray,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    gap: 8,
     marginBottom: 20,
   },
-  filterActiveButton: {
-    backgroundColor: colors.primary,
-  },
-  filterButtonText: {
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  filterActiveText: {
+  activeFilterText: {
     color: colors.white,
+    fontWeight: 'bold',
   },
   clearFilterButton: {
     marginLeft: 8,
@@ -606,72 +687,145 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: colors.background,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 32,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -3,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
+    color: colors.textPrimary,
   },
   modalBody: {
-    padding: 16,
+    padding: 20,
   },
   inputLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 6,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   textInput: {
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderColor: 'rgba(0,0,0,0.08)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
     fontSize: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  dateInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dateInput: {
+    flex: 1,
+    paddingRight: 40,
+  },
+  calendarButton: {
+    position: 'absolute',
+    right: 12,
+    padding: 8,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
-    gap: 12,
+    marginTop: 8,
+    gap: 16,
   },
   cancelButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#eee',
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
   },
   cancelButtonText: {
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   saveButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   saveButtonText: {
     fontWeight: 'bold',
     color: colors.white,
+    fontSize: 16,
+  },
+  filterButtonCircle: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  filterActiveButtonCircle: {
+    backgroundColor: colors.primary,
+    borderWidth: 0,
+  },
+  addPaymentButtonCircle: {
+    position: 'absolute',
+    bottom: 90,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderWidth: 0,
   },
 });
