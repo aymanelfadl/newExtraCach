@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -742,7 +742,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 1,
   },
   dateInputContainer: {
     flexDirection: 'row',
@@ -755,8 +754,9 @@ const styles = StyleSheet.create({
   },
   calendarButton: {
     position: 'absolute',
-    right: 12,
-    padding: 8,
+    right: 8,
+    top: 8,
+    padding: 10,
   },
   modalActions: {
     flexDirection: 'row',
