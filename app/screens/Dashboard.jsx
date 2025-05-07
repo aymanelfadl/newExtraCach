@@ -247,7 +247,7 @@ const Dashboard = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={[styles.headerTitle]}>Tableau de bord</Text>
+                <Text style={styles.headerTitle}>Tableau de bord</Text>
                 <TouchableOpacity 
                     style={styles.periodBadge}
                     onPress={() => setDateFilterModalVisible(true)}
@@ -277,6 +277,21 @@ const Dashboard = () => {
             >
                 {/* Updated Financial Overview Cards */}
                 <View style={styles.financialCardsContainer}>
+                    <View style={[
+                        styles.financialCard, 
+                        summary.balance >= 0 ? styles.balancePositiveCard : styles.balanceNegativeCard
+                    ]}>
+                        <View style={styles.financialCardIconContainer}>
+                            <Icon name="bank" size={32} color={colors.white} />
+                        </View>
+                        <Text style={styles.financialCardLabel}>Solde</Text>
+                        <Text style={styles.financialCardValue}>
+                            {summary.balance >= 0 ? '+' : ''}{summary.balance.toFixed(2)} MAD
+                        </Text>
+                    </View>
+                    
+                    <View style={styles.cardSeparator} />
+                    
                     <View style={[styles.financialCard, styles.incomeCard]}>
                         <View style={styles.financialCardIconContainer}>
                             <Icon name="cash-plus" size={32} color={colors.white} />
@@ -294,19 +309,6 @@ const Dashboard = () => {
                         <Text style={styles.financialCardLabel}>Total Dépenses</Text>
                         <Text style={styles.financialCardValue}>
                             -{summary.totalExpenses.toFixed(2)} MAD
-                        </Text>
-                    </View>
-                    
-                    <View style={[
-                        styles.financialCard, 
-                        summary.balance >= 0 ? styles.balancePositiveCard : styles.balanceNegativeCard
-                    ]}>
-                        <View style={styles.financialCardIconContainer}>
-                            <Icon name="bank" size={32} color={colors.white} />
-                        </View>
-                        <Text style={styles.financialCardLabel}>Solde</Text>
-                        <Text style={styles.financialCardValue}>
-                            {summary.balance >= 0 ? '+' : ''}{summary.balance.toFixed(2)} MAD
                         </Text>
                     </View>
                 </View>
@@ -358,51 +360,6 @@ const Dashboard = () => {
                             </View>
                         </View>
                     </View>
-                </View>
-
-                {/* Trends Chart */}
-                <View style={styles.chartCard}>
-                    <Text style={styles.sectionTitle}>Tendances</Text>
-                    {summary.trend.labels.length > 0 ? (
-                        <LineChart
-                            data={{
-                                labels: summary.trend.labels,
-                                datasets: [
-                                    {
-                                        data: summary.trend.income.length > 0 ? summary.trend.income : [0],
-                                        color: () => colors.income,
-                                        strokeWidth: 2,
-                                    },
-                                    {
-                                        data: summary.trend.expenses.length > 0 ? summary.trend.expenses : [0],
-                                        color: () => colors.expense,
-                                        strokeWidth: 2,
-                                    }
-                                ],
-                                legend: ["Revenus", "Dépenses"]
-                            }}
-                            width={Dimensions.get("window").width - (spacing.medium * 4)}
-                            height={220}
-                            chartConfig={{
-                                backgroundColor: colors.card,
-                                backgroundGradientFrom: colors.card,
-                                backgroundGradientTo: colors.card,
-                                decimalPlaces: 0,
-                                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                                style: {
-                                    borderRadius: borderRadius.medium
-                                },
-                                propsForDots: {
-                                    r: "4",
-                                }
-                            }}
-                            bezier
-                            style={styles.chart}
-                        />
-                    ) : (
-                        <Text style={styles.emptyText}>Aucune donnée à afficher</Text>
-                    )}
                 </View>
             </ScrollView>
             
@@ -533,7 +490,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: typography.sizeXLarge,
         fontWeight: typography.weightBold,
-        color: colors.textPrimary,
+        color: colors.primary,
     },
     periodBadge: {
         flexDirection: 'row',
@@ -761,6 +718,11 @@ const styles = StyleSheet.create({
         color: colors.white,
         fontWeight: typography.weightBold,
         fontSize: typography.sizeMedium,
+    },
+    cardSeparator: {
+        height: 1,
+        backgroundColor: colors.divider,
+        marginVertical: spacing.small,
     },
 });
 
