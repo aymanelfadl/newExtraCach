@@ -194,6 +194,22 @@ export default function Employees() {
       
       <View style={styles.summaryContainer}>
         <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Solde</Text>
+          {employees.length > 0 && (
+            <Text style={[
+              styles.summaryValue,
+              employees.reduce((sum, emp) => sum + (Number(emp.balance) || 0), 0) > 0 
+                ? styles.positiveBalance 
+                : employees.reduce((sum, emp) => sum + (Number(emp.balance) || 0), 0) < 0
+                  ? styles.negativeBalance
+                  : styles.zeroBalance
+            ]}>
+              {employees.reduce((sum, emp) => sum + (Number(emp.balance) || 0), 0)} MAD
+            </Text>
+          )}
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>Total Employés</Text>
           <Text style={styles.summaryValue}>{employees.length}</Text>
         </View>
@@ -208,7 +224,7 @@ export default function Employees() {
       <View style={styles.header}>
         <Text style={styles.title}>Liste des employés</Text>
         <TouchableOpacity onPress={handleAddEmployee} style={styles.addButton}>
-          <Icon name="account-plus" size={24} color={colors.onPrimary} />
+          <Icon name="account-plus" size={24} color={colors.white} />
         </TouchableOpacity>
       </View>
       

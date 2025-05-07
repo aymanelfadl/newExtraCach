@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { transactionService, employeeService } from '../../services';
+import { transactionService } from '../../services';
 import { colors, typography, shadows, spacing, borderRadius } from '../../styles/theme';
 import { useUser } from '../../context/UserContext';
 import { LineChart } from 'react-native-chart-kit';
@@ -59,7 +59,7 @@ const Dashboard = () => {
                 ...prev,
                 startDate: selectedDate
             }));
-            // Reload data with new date range
+            
             setTimeout(() => loadDashboardData(), 100);
         }
     };
@@ -82,6 +82,15 @@ const Dashboard = () => {
             month: '2-digit',
             year: 'numeric'
         });
+    };
+
+
+    const parseDate = (dateString) => {
+        if (!dateString) return null;
+        const parts = dateString.split('/');
+        if (parts.length !== 3) return null;
+        // Create date (month is 0-indexed in JS Date)
+        return new Date(parts[2], parts[1] - 1, parts[0]);
     };
 
     const formatMonthYear = (date) => {
@@ -108,7 +117,6 @@ const Dashboard = () => {
             setRefreshing(true);
 
             const transactionResult = await transactionService.getTransactions();
-            const employeesResult = await employeeService.getEmployees();
 
             if (transactionResult.success) {
                 const transactions = transactionResult.transactions || [];
@@ -200,16 +208,10 @@ const Dashboard = () => {
                     percentage: Math.round((value / (totalExpenses || 1)) * 100)
                 })).sort((a, b) => b.value - a.value);
 
-                const employeesCount = employeesResult.success ? employeesResult.employees.length : 0;
-                const pendingPayments = employeesResult.success ?
-                    employeesResult.employees.filter(emp => emp.balance < 0).length : 0;
-
                 setSummary({
                     totalIncome,
                     totalExpenses,
                     balance: totalIncome - totalExpenses,
-                    employeesCount,
-                    pendingPayments,
                     categories: {
                         income: incomeCategList.slice(0, 3),
                         expenses: expenseCategList.slice(0, 3)
@@ -245,7 +247,7 @@ const Dashboard = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Tableau de bord</Text>
+                <Text style={[styles.headerTitle]}>Tableau de bord</Text>
                 <TouchableOpacity 
                     style={styles.periodBadge}
                     onPress={() => setDateFilterModalVisible(true)}
