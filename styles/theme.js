@@ -29,20 +29,17 @@ export const colors = {
   textDisabled: '#bdc3c7',   // Light gray for disabled text
   divider: '#ecf0f1',        // Very light gray for dividers
   
-  // Status colors
   success: '#2ecc71',        // Green for success
   warning: '#f1c40f',        // Yellow for warnings
   error: '#e74c3c',          // Red for errors
   info: '#3498db',           // Blue for information
   
-  // Navigation colors
-  tabBar: '#ffffff',         // White tab bar
+  white: '#ffffff',         // White tab bar
   tabBarActive: '#3498db',   // Blue for active tab
   tabBarInactive: '#bdc3c7', // Gray for inactive tab
 };
 
 export const typography = {
-  // Font sizes
   sizeXSmall: 10,
   sizeSmall: 12,
   sizeRegular: 14,
@@ -51,7 +48,6 @@ export const typography = {
   sizeXLarge: 22,
   sizeXXLarge: 28,
   
-  // Font weights
   weightRegular: '400',
   weightMedium: '500',
   weightSemiBold: '600',

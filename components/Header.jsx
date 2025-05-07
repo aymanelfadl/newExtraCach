@@ -57,7 +57,7 @@ const Header = ({ screenName, onSearching }) => {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
-    paddingTop: spacing.extraLarge,
+    paddingTop: spacing.medium,
     paddingBottom: spacing.medium,
     paddingHorizontal: spacing.medium,
     ...shadows.small,

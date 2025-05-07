@@ -5,23 +5,27 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   Alert, 
-  FlatList 
+  ScrollView,
+  RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { colors, typography, spacing, borderRadius, shadows, commonStyles } from '../../styles/theme';
 import { userService, authService } from '../../services/index';
 import { useUser } from '../../context/UserContext';
+import Header from '../../components/Header';
 
 const Settings = () => {
   const { setViewingAsUser, viewingAs } = useUser();
   const navigation = useNavigation();
   const [availableUsers, setAvailableUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const loadData = async () => {
+  const loadData = async () => {
+    try {
+      setRefreshing(true);
       const user = await authService.getCurrentUser();
       if (!user) {
         Alert.alert("Erreur", "Utilisateur non authentifié.");
@@ -30,28 +34,49 @@ const Settings = () => {
       setCurrentUser(user);
       const result = await userService.getUsersWithSharedAccess();
       setAvailableUsers(result.users); 
-    };
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
 
+  const handleRefresh = () => {
+    loadData();
+  };
+
   const handleUserSwitch = async (user) => {
-    await setViewingAsUser(user);
-    Alert.alert("Compte utilisateur changé", `Vous consultez maintenant le compte de ${user.fullName}`);
+    try {
+      await setViewingAsUser(user);
+      Alert.alert("Compte utilisateur changé", `Vous consultez maintenant le compte de ${user.fullName}`);
+    } catch (error) {
+      console.error('Error switching user:', error);
+      Alert.alert("Erreur", "Impossible de changer d'utilisateur.");
+    }
   };
 
   const handleReturnToMyAccount = async () => {
-    await setViewingAsUser(null);
-    Alert.alert("Retour à votre compte", "Vous consultez maintenant votre propre compte");
+    try {
+      await setViewingAsUser(null);
+      Alert.alert("Retour à votre compte", "Vous consultez maintenant votre propre compte");
+    } catch (error) {
+      console.error('Error returning to account:', error);
+      Alert.alert("Erreur", "Impossible de revenir à votre compte.");
+    }
   };
 
   const handleLogout = async () => {
     Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
+      "Déconnexion",
+      "Êtes-vous sûr de vouloir vous déconnecter ?",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Annuler", style: "cancel" },
         { 
-          text: "Logout", 
+          text: "Déconnexion", 
           onPress: async () => {
             await authService.logout();
           },
@@ -63,99 +88,209 @@ const Settings = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
-      <View style={styles.settingSection}>
-        <Text style={styles.sectionLabel}>Voir un autre compte</Text>
-        {currentUser && (
-          <TouchableOpacity
-            style={[
-              styles.userItem,
-              !viewingAs && styles.activeUserItem
-            ]}
-            onPress={handleReturnToMyAccount}
+      <Header screenName="Paramètres" />
+      
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        <View style={styles.settingSection}>
+          <Text style={styles.sectionTitle}>Gestion de Compte</Text>
+          <View style={styles.sectionContent}>
+            {currentUser && (
+              <TouchableOpacity
+                style={[
+                  styles.userItem,
+                  !viewingAs && styles.activeUserItem
+                ]}
+                onPress={handleReturnToMyAccount}
+              >
+                <View style={styles.userIcon}>
+                  <Text style={styles.userInitial}>{currentUser.fullName?.charAt(0) || currentUser.username?.charAt(0) || "?"}</Text>
+                </View>
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName}>{currentUser.fullName || currentUser.username} (Vous)</Text>
+                  <Text style={styles.userEmail}>{currentUser.email}</Text>
+                </View>
+                {!viewingAs && <Icon name="check-circle" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+            )}
+
+            {availableUsers.length > 0 && (
+              <>
+                <Text style={styles.subsectionTitle}>Comptes partagés</Text>
+                {availableUsers.map(item => (
+                  <TouchableOpacity
+                    key={item.uid}
+                    style={[
+                      styles.userItem,
+                      viewingAs?.uid === item.uid && styles.activeUserItem
+                    ]}
+                    onPress={() => handleUserSwitch(item)}
+                  >
+                    <View style={[styles.userIcon, {backgroundColor: colors.income}]}>
+                      <Text style={styles.userInitial}>{item.fullName?.charAt(0) || "?"}</Text>
+                    </View>
+                    <View style={styles.userInfo}>
+                      <Text style={styles.userName}>{item.fullName}</Text>
+                      <Text style={styles.userEmail}>{item.email}</Text>
+                    </View>
+                    {viewingAs?.uid === item.uid && <Icon name="check-circle" size={20} color={colors.primary} />}
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {availableUsers.length === 0 && !refreshing && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>Aucun utilisateur partagé</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.settingSection}>
+          <Text style={styles.sectionTitle}>Actions</Text>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('AddSharedUser')}
           >
-            <Text style={styles.userName}>{currentUser.fullName || currentUser.username} (Vous)</Text>
-            {!viewingAs && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+            <Icon name="account-plus" size={24} color={colors.primary} />
+            <Text style={styles.actionButtonText}>Ajouter un utilisateur partagé</Text>
+            <Icon name="chevron-right" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
-        )}
-        <FlatList
-          data={availableUsers}
-          keyExtractor={item => item.uid}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.userItem,
-                viewingAs?.uid === item.uid && styles.activeUserItem
-              ]}
-              onPress={() => handleUserSwitch(item)}
-            >
-              <Text style={styles.userName}>{item.fullName}</Text>
-              {viewingAs?.uid === item.uid && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
-            </TouchableOpacity>
-          )}
-          ListEmptyComponent={<Text style={{color: "#999", margin: 10}}>Aucun utilisateur partagé.</Text>}
-        />
-      </View>
-        <TouchableOpacity style={styles.settingItemButton}
-            onPress={() => navigation.navigate('AddSharedUser')}>
-            <Text style={styles.settingText}>Ajouter un utilisateur partagé</Text>
-            <Ionicons name="chevron-forward" size={24} color="#555" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={handleLogout}
+          >
+            <Icon name="logout" size={24} color={colors.white} />
+            <Text style={styles.logoutText}>Déconnexion</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, backgroundColor: '#f5f5f5', padding: 16
+    ...commonStyles.container,
   },
-  title: {
-    fontSize: 24, fontWeight: 'bold', marginBottom: 24, color: '#333'
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: spacing.medium,
+    paddingBottom: spacing.extraLarge * 2,
   },
   settingSection: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 24,
-    padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.large,
+    marginBottom: spacing.medium,
+    ...shadows.medium,
+    overflow: 'hidden'
   },
-  sectionLabel: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 8
+  sectionTitle: {
+    fontSize: typography.sizeLarge,
+    fontWeight: typography.weightBold,
+    color: colors.textPrimary,
+    padding: spacing.medium,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  sectionContent: {
+    padding: spacing.small,
+  },
+  subsectionTitle: {
+    fontSize: typography.sizeRegular,
+    fontWeight: typography.weightMedium,
+    color: colors.textSecondary,
+    marginTop: spacing.medium,
+    marginBottom: spacing.small,
+    marginLeft: spacing.small,
   },
   userItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee'
+    padding: spacing.medium,
+    borderRadius: borderRadius.medium,
+    marginBottom: spacing.small,
   },
   activeUserItem: {
-    backgroundColor: '#E8F5E9'
+    backgroundColor: `${colors.primary}15`,
+  },
+  userIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.round,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.medium,
+  },
+  userInitial: {
+    color: colors.white,
+    fontSize: typography.sizeMedium,
+    fontWeight: typography.weightBold,
+  },
+  userInfo: {
+    flex: 1,
   },
   userName: {
-    fontSize: 16,
-    color: '#333'
+    fontSize: typography.sizeRegular,
+    fontWeight: typography.weightSemiBold,
+    color: colors.textPrimary,
+  },
+  userEmail: {
+    fontSize: typography.sizeSmall,
+    color: colors.textSecondary,
+  },
+  emptyState: {
+    padding: spacing.large,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    color: colors.textSecondary,
+    fontSize: typography.sizeRegular,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.medium,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  actionButtonText: {
+    flex: 1,
+    marginLeft: spacing.medium,
+    fontSize: typography.sizeMedium,
+    color: colors.textPrimary,
   },
   logoutButton: {
-    backgroundColor: '#FF3B30',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center'
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.medium,
+    padding: spacing.medium,
+    marginTop: spacing.medium,
+    marginHorizontal: spacing.medium,
+    marginBottom: spacing.medium,
+    ...shadows.small,
   },
   logoutText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold'
+    color: colors.white,
+    fontSize: typography.sizeMedium,
+    fontWeight: typography.weightBold,
+    marginLeft: spacing.small,
   }
 });
 
