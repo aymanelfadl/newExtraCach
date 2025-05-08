@@ -23,12 +23,23 @@ const Header = ({ screenName, onSearching }) => {
     }
     setSearching(!searching);
   };
+  
+  const getColor = (screenName) => {
+    switch (screenName) {
+      case 'Dépenses':
+        return colors.expense;
+      case 'Revenus':
+        return colors.income;
+      default:
+        return colors.primary;
+    }
+  };
 
   return (
     <View style={styles.header}>
       {searching ? (
         <View style={styles.searchContainer}>
-          <Icon name="magnify" size={24} color={colors.primary} style={styles.searchIcon} />
+          <Icon name="magnify" size={24} style={[styles.searchIcon, { color: getColor(screenName) }]} />
           <TextInput
             style={styles.searchInput}
             placeholder="Rechercher..."
@@ -42,10 +53,10 @@ const Header = ({ screenName, onSearching }) => {
         </View>
       ) : (
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>{screenName}</Text>
-          {onSearching && (
+                <Text style={[styles.title, { color: getColor(screenName) }]}>{screenName}</Text>
+                {onSearching && (
             <TouchableOpacity onPress={toggleSearch} style={styles.searchButton}>
-              <Icon name="magnify" size={24} color={colors.primary} />
+              <Icon name="magnify" size={24} color={getColor(screenName)} />
             </TouchableOpacity>
           )}
         </View>

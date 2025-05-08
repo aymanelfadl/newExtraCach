@@ -177,6 +177,11 @@ export default function Employees() {
     );
   };
 
+  const totalSalaries = employees.reduce((sum, emp) => sum + (Number(emp.salary) || 0), 0);
+  const totalPayments = employees.reduce((sum, emp) => 
+    sum + (emp.payments?.reduce((acc, payment) => acc + (Number(payment.amount) || 0), 0) || 0), 
+  0);
+
   return (
     <View style={styles.container}>
       <Header 
@@ -195,18 +200,12 @@ export default function Employees() {
       <View style={styles.summaryContainer}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>Solde</Text>
-          {employees.length > 0 && (
-            <Text style={[
-              styles.summaryValue,
-              employees.reduce((sum, emp) => sum + (Number(emp.balance) || 0), 0) > 0 
-                ? styles.positiveBalance 
-                : employees.reduce((sum, emp) => sum + (Number(emp.balance) || 0), 0) < 0
-                  ? styles.negativeBalance
-                  : styles.zeroBalance
-            ]}>
-              {employees.reduce((sum, emp) => sum + (Number(emp.balance) || 0), 0)} MAD
-            </Text>
-          )}
+          <Text style={[
+            styles.summaryValue,
+            styles.positiveBalance
+          ]}>
+            {totalPayments} MAD
+          </Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
@@ -217,7 +216,7 @@ export default function Employees() {
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>Masse Salariale</Text>
           <Text style={styles.summaryValue}>
-            {employees.reduce((sum, emp) => sum + (Number(emp.salary) || 0), 0)} MAD
+            {totalSalaries} MAD
           </Text>
         </View>
       </View>      
@@ -260,12 +259,12 @@ export default function Employees() {
             </View>
             
             <View style={styles.employeeFinancials}>
+              <Text style={styles.expenseLabel}>Total donné:</Text>
               <Text style={[
                 styles.employeeBalance, 
-                item.balance > 0 ? styles.positiveBalance : 
-                item.balance < 0 ? styles.negativeBalance : styles.zeroBalance
+                styles.positiveBalance
               ]}>
-                {item.balance > 0 ? '+' : item.balance < 0 ? '' : ''}{item.balance || 0} MAD
+                {(item.payments?.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0) || 0)} MAD
               </Text>
               <View style={styles.actionsRow}>
                 <TouchableOpacity 
@@ -295,8 +294,6 @@ export default function Employees() {
           />
         }
       />
-
-      {/* Add Employee Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -454,7 +451,7 @@ const styles = StyleSheet.create({
     borderColor: colors.card,
   },
   employeeInitial: {
-    color: colors.onPrimary,
+    color: colors.white,
     fontSize: typography.sizeMedium,
     fontWeight: typography.weightBold,
   },
@@ -482,6 +479,11 @@ const styles = StyleSheet.create({
   },
   employeeFinancials: {
     alignItems: 'flex-end',
+  },
+  expenseLabel: {
+    fontSize: typography.sizeSmall,
+    color: colors.textSecondary,
+    marginBottom: spacing.tiny,
   },
   employeeBalance: {
     fontSize: typography.sizeRegular,
@@ -596,7 +598,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weightSemiBold,
   },
   saveButtonText: {
-    color: colors.onPrimary,
+    color: colors.white,
     fontSize: typography.sizeRegular,
     fontWeight: typography.weightSemiBold,
   },
