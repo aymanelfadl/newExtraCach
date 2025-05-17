@@ -309,6 +309,7 @@ const Revenue = () => {
         onEditPress={handleEditPress}
         emptyMessage="Aucun revenu trouvé"
         isLoading={isLoading}
+        numColumns={1}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

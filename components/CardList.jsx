@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -6,7 +6,8 @@ import {
   Text, 
   TouchableOpacity,
   Modal,
-  Dimensions
+  Dimensions,
+  ScrollView
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
@@ -15,7 +16,7 @@ const { width, height } = Dimensions.get('window');
 
 const CardList = ({ 
   data, 
-  numColumns = 2, 
+  numColumns = 1, 
   onCardPress,
   onDeletePress,
   onEditPress,
@@ -25,6 +26,101 @@ const CardList = ({
 }) => {
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState('Tous');
+  const [monthsMenuVisible, setMonthsMenuVisible] = useState(false);
+  const [availableMonths, setAvailableMonths] = useState(['Tous']);
+  const [filteredData, setFilteredData] = useState(data);
+
+  // Extract available months from data
+  useEffect(() => {
+    if (data && data.length > 0) {
+      // Extract month and year from dateAdded (format: DD/MM/YYYY)
+      const months = data.map(item => {
+        const dateParts = (item.dateAdded || '').split('/');
+        if (dateParts.length === 3) {
+          const month = dateParts[1];
+          const year = dateParts[2];
+          return `${month}/${year}`;
+        }
+        return null;
+      }).filter(Boolean);
+
+      // Get unique months
+      const uniqueMonths = ['Tous', ...new Set(months)];
+      
+      // Map numeric months to names
+      const monthNames = {
+        '01': 'Janvier',
+        '02': 'Février',
+        '03': 'Mars',
+        '04': 'Avril',
+        '05': 'Mai', 
+        '06': 'Juin',
+        '07': 'Juillet',
+        '08': 'Août',
+        '09': 'Septembre',
+        '10': 'Octobre',
+        '11': 'Novembre',
+        '12': 'Décembre'
+      };
+      
+      // Format months as "Month Year"
+      const formattedMonths = uniqueMonths.map(month => {
+        if (month === 'Tous') return 'Tous';
+        const [monthNum, year] = month.split('/');
+        return `${monthNames[monthNum] || monthNum} ${year}`;
+      });
+      
+      setAvailableMonths(formattedMonths);
+    }
+  }, [data]);
+
+  // Filter data by selected month
+  useEffect(() => {
+    if (selectedMonth === 'Tous') {
+      setFilteredData(data);
+    } else {
+      // Extract month and year from selected month
+      const monthParts = selectedMonth.split(' ');
+      if (monthParts.length >= 2) {
+        const selectedMonthName = monthParts[0];
+        const selectedYear = monthParts[1];
+        
+        // Map month names back to numbers
+        const monthNumbers = {
+          'Janvier': '01',
+          'Février': '02',
+          'Mars': '03',
+          'Avril': '04',
+          'Mai': '05',
+          'Juin': '06',
+          'Juillet': '07',
+          'Août': '08',
+          'Septembre': '09',
+          'Octobre': '10',
+          'Novembre': '11',
+          'Décembre': '12'
+        };
+        
+        const selectedMonthNum = monthNumbers[selectedMonthName];
+        
+        // Filter data by month/year
+        const filtered = data.filter(item => {
+          const dateParts = (item.dateAdded || '').split('/');
+          if (dateParts.length === 3) {
+            const month = dateParts[1];
+            const year = dateParts[2];
+            return month === selectedMonthNum && year === selectedYear;
+          }
+          return false;
+        });
+        
+        setFilteredData(filtered);
+      } else {
+        setFilteredData(data);
+      }
+    }
+  }, [selectedMonth, data]);
 
   const handleLongPress = (item) => {
     setSelectedItem(item);
@@ -56,29 +152,44 @@ const CardList = ({
 
     return (
       <TouchableOpacity 
-        style={styles.itemContainer} 
+        style={styles.listItemContainer} 
         onPress={() => onCardPress && onCardPress(item)} 
         onLongPress={() => handleLongPress(item)}
         delayLongPress={500}
       >
-        <Text style={styles.description} numberOfLines={1}>{item.description}</Text>
-        <Text style={[styles.amount, { color: amountColor }]}>
-          <Text style={{ fontWeight: typography.weightBold }}>{amountPrefix}</Text>
-          {item.spends || item.amount} MAD
-        </Text>
-        <Text style={styles.dateAdded}>{item.dateAdded}</Text>
+        <View style={styles.listItemContent}>
+          <View style={styles.leftContent}>
+            <Text style={styles.description} numberOfLines={1}>{item.description}</Text>
+            <Text style={styles.dateAdded}>{item.dateAdded}</Text>
+          </View>
+          <View style={styles.rightContent}>
+            <Text style={[styles.amount, { color: amountColor }]}>
+              <Text style={{ fontWeight: typography.weightBold }}>{amountPrefix}</Text>
+              {item.spends || item.amount} MAD
+            </Text>
+          </View>
+        </View>
       </TouchableOpacity>
     );
   };
 
   return (
     <View style={styles.container}>
+      {/* Month filter button */}
+      <TouchableOpacity 
+        style={styles.monthFilterButton}
+        onPress={() => setMonthsMenuVisible(true)}
+      >
+        <Text style={styles.monthFilterText}>{selectedMonth}</Text>
+        <Icon name="chevron-down" size={20} color={colors.textPrimary} />
+      </TouchableOpacity>
+      
+      {/* Items list */}
       <FlatList
-        data={data}
+        data={filteredData}
         renderItem={renderItem}
         keyExtractor={(item) => item.id?.toString()}
         numColumns={numColumns}
-        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : null}
         contentContainerStyle={styles.listContainer}
         refreshControl={refreshControl}
         ListEmptyComponent={
@@ -91,6 +202,7 @@ const CardList = ({
         }
       />
 
+      {/* Action menu modal */}
       <Modal
         transparent={true}
         visible={actionMenuVisible}
@@ -136,6 +248,53 @@ const CardList = ({
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Months selection modal */}
+      <Modal
+        transparent={true}
+        visible={monthsMenuVisible}
+        animationType="slide"
+        onRequestClose={() => setMonthsMenuVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setMonthsMenuVisible(false)}
+        >
+          <View style={styles.monthsMenu}>
+            <Text style={styles.monthsMenuTitle}>Sélectionner un mois</Text>
+            <View style={styles.divider} />
+            
+            <ScrollView style={styles.monthsList}>
+              {availableMonths.map((month, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.monthItem,
+                    selectedMonth === month && styles.selectedMonthItem
+                  ]}
+                  onPress={() => {
+                    setSelectedMonth(month);
+                    setMonthsMenuVisible(false);
+                  }}
+                >
+                  <Text 
+                    style={[
+                      styles.monthItemText,
+                      selectedMonth === month && styles.selectedMonthItemText
+                    ]}
+                  >
+                    {month}
+                  </Text>
+                  {selectedMonth === month && (
+                    <Icon name="check" size={20} color={colors.income} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -149,35 +308,92 @@ const styles = StyleSheet.create({
     padding: spacing.small,
     paddingBottom: spacing.extraLarge,
   },
-  columnWrapper: {
-    justifyContent: 'space-between',
-  },
-  itemContainer: {
-    flex: 1,
-    margin: spacing.small,
-    borderRadius: borderRadius.large,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.medium,
+  listItemContainer: {
     backgroundColor: colors.card,
-    ...shadows.medium,
     marginBottom: spacing.small,
+    borderRadius: borderRadius.medium,
+    ...shadows.small,
+    overflow: 'hidden',
+  },
+  listItemContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.medium,
+  },
+  leftContent: {
+    flex: 1,
+    marginRight: spacing.small,
+  },
+  rightContent: {
+    alignItems: 'flex-end',
   },
   description: {
-    fontSize: typography.sizeMedium,
+    fontSize: typography.sizeRegular,
     fontWeight: typography.weightSemiBold,
     color: colors.textPrimary,
     marginBottom: spacing.tiny,
-    textAlign: 'center',
   },
   amount: {
-    fontSize: typography.sizeRegular,
-    marginBottom: spacing.tiny,
-    fontWeight: typography.weightMedium,
+    fontSize: typography.sizeMedium,
+    fontWeight: typography.weightSemiBold,
   },
   dateAdded: {
     fontSize: typography.sizeSmall,
     color: colors.textSecondary,
+  },
+  monthFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.card,
+    margin: spacing.medium,
+    marginBottom: 0,
+    padding: spacing.medium,
+    borderRadius: borderRadius.medium,
+    ...shadows.small,
+  },
+  monthFilterText: {
+    fontSize: typography.sizeMedium,
+    fontWeight: typography.weightMedium,
+    color: colors.textPrimary,
+  },
+  monthsMenu: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.large,
+    width: width * 0.9,
+    maxHeight: height * 0.7,
+    ...shadows.large,
+    overflow: 'hidden',
+  },
+  monthsMenuTitle: {
+    fontSize: typography.sizeLarge,
+    fontWeight: typography.weightSemiBold,
+    color: colors.textPrimary,
+    padding: spacing.medium,
+    textAlign: 'center',
+  },
+  monthsList: {
+    maxHeight: height * 0.5,
+  },
+  monthItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.medium,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  selectedMonthItem: {
+    backgroundColor: `${colors.income}10`,
+  },
+  monthItemText: {
+    fontSize: typography.sizeRegular,
+    color: colors.textPrimary,
+  },
+  selectedMonthItemText: {
+    fontWeight: typography.weightSemiBold,
+    color: colors.income,
   },
   emptyContainer: {
     padding: spacing.large,
