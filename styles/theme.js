@@ -20,6 +20,8 @@ export const colors = {
   income: '#27ae60',         // Green for income/positive
   expense: '#e74c3c',        // Red for expense/negative
   neutral: '#f39c12',        // Orange for neutral
+  warning: '#f39c12',        // Warning color (orange)
+  error: '#e74c3c',          // Error color (red)
   
   // UI colors
   background: '#f5f7fa',     // Light background

@@ -5,6 +5,7 @@ import LogIn from './LogIn';
 import SplashScreen from './SplashScreen';
 import { useUser } from '../../context/UserContext';
 import AddSharedUser from '../../components/AddSharedUser';
+import ArchivedTransactions from './ArchivedTransactions';
 import React, { useState, useEffect } from 'react';
 
 const Stack = createNativeStackNavigator();
@@ -29,6 +30,7 @@ const AppNavigator = () => {
           <Stack.Screen name="MainTabs" component={TabNavigator} />
           <Stack.Screen name="EmployeeDetail" component={EmployeeDetail} />
           <Stack.Screen name="AddSharedUser" component={AddSharedUser} options={{ headerShown: false }} />
+          <Stack.Screen name="ArchivedTransactions" component={ArchivedTransactions} options={{ headerShown: false }} />
         </>
       )}
     </Stack.Navigator>
