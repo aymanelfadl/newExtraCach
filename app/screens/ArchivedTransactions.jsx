@@ -378,39 +378,33 @@ const ArchivedTransactions = () => {
   const renderItem = ({ item }) => {
     const isExpense = item.type === 'expense';
     const amount = parseFloat(item.amount) || 0;
-    
+
     return (
       <View style={styles.transactionItem}>
-        <View style={styles.transactionHeader}>
-          <View style={styles.dateContainer}>
-            <Text style={styles.dateLabel}>Date de transaction:</Text>
-            <Text style={styles.transactionDate}>{formatDate(item.date || item.createdAt)}</Text>
-          </View>
-          <View style={styles.dateContainer}>
-            <Text style={styles.dateLabel}>Date d'archivage:</Text>
-            <Text style={styles.archivedDate}>{formatDate(item.archivedAt)}</Text>
-          </View>
-        </View>
-        
         <View style={styles.transactionContent}>
-          <View style={[styles.typeIndicator, { backgroundColor: isExpense ? colors.expense : colors.income }]}>
+          <View style={[styles.typeIndicator, { backgroundColor: isExpense ? colors.expense : colors.income }]}> 
             <Icon 
               name={isExpense ? 'arrow-down' : 'arrow-up'} 
               size={16} 
               color={colors.white} 
             />
           </View>
-          
           <View style={styles.transactionDetails}>
             <Text style={styles.description}>
               {item.description || (isExpense ? 'Dépense' : 'Revenu')}
             </Text>
-            {item.category && (
-              <Text style={styles.category}>{item.category}</Text>
-            )}
+            <View style={styles.dateContainerRow}>
+              <Text style={styles.dateText}>
+                Date: {formatDate(item.date || item.createdAt)}
+              </Text>
+              {item.archivedAt && (
+                <Text style={styles.archiveText}>
+                  Archivée: {formatDate(item.archivedAt)}
+                </Text>
+              )}
+            </View>
           </View>
-          
-          <Text style={[styles.amount, { color: isExpense ? colors.expense : colors.income }]}>
+          <Text style={[styles.amount, { color: isExpense ? colors.expense : colors.income }]}> 
             {isExpense ? '-' : '+'}{formatCurrency(amount)}
           </Text>
         </View>
@@ -451,33 +445,33 @@ const ArchivedTransactions = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header screenName="Transactions Archivées" backButton />
+      <Header screenName="Archives" backButton />
       
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Chargement des archives...</Text>
+          <Text style={styles.loadingText}>Chargement...</Text>
         </View>
       ) : (
         <>
           {transactions.length > 0 && (
-            <TouchableOpacity 
-              style={styles.exportButton}
-              onPress={handleExportArchived}
-              disabled={exporting}
-            >
-              {exporting ? (
-                <>
+            <View style={styles.headerContainer}>
+              <Text style={styles.sectionTitle}>
+                Transactions archivées ({transactions.length})
+              </Text>
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity 
+                style={styles.exportButton}
+                onPress={handleExportArchived}
+                disabled={exporting}
+              >
+                {exporting ? (
                   <ActivityIndicator size="small" color={colors.white} />
-                  <Text style={styles.exportButtonText}>Exportation en cours...</Text>
-                </>
-              ) : (
-                <>
+                ) : (
                   <Icon name="file-excel" size={20} color={colors.white} />
-                  <Text style={styles.exportButtonText}>Exporter les archives</Text>
-                </>
-              )}
-            </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            </View>
           )}
           
           <FlatList
@@ -505,7 +499,7 @@ const styles = StyleSheet.create({
     ...commonStyles.container,
   },
   listContent: {
-    padding: spacing.medium,
+    padding: spacing.small,
     paddingBottom: spacing.extraLarge * 2,
     flexGrow: 1,
   },
@@ -520,58 +514,41 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   exportButton: {
+    backgroundColor: colors.income,
+    borderRadius: borderRadius.round,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.small,
+    marginLeft: spacing.medium,
+  },
+  headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.income,
-    borderRadius: borderRadius.medium,
-    padding: spacing.medium,
-    margin: spacing.medium,
-    ...shadows.small,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.medium,
+    paddingVertical: spacing.small,
   },
-  exportButtonText: {
-    color: colors.white,
-    fontSize: typography.sizeRegular,
+  sectionTitle: {
+    fontSize: typography.sizeMedium,
     fontWeight: typography.weightBold,
-    marginLeft: spacing.small,
+    color: colors.textPrimary,
   },
   transactionItem: {
     backgroundColor: colors.card,
-    borderRadius: borderRadius.large,
-    marginBottom: spacing.medium,
+    borderRadius: borderRadius.medium,
+    marginBottom: spacing.small,
     padding: spacing.medium,
     ...shadows.small,
-  },
-  transactionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.medium,
-  },
-  dateContainer: {
-    flexDirection: 'column',
-  },
-  dateLabel: {
-    fontSize: typography.sizeSmall,
-    color: colors.textTertiary,
-    fontWeight: typography.weightRegular,
-  },
-  transactionDate: {
-    fontSize: typography.sizeSmall,
-    color: colors.textSecondary,
-    fontWeight: typography.weightMedium,
-  },
-  archivedDate: {
-    fontSize: typography.sizeSmall,
-    color: colors.textSecondary,
-    fontWeight: typography.weightMedium,
   },
   transactionContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   typeIndicator: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: borderRadius.round,
     justifyContent: 'center',
     alignItems: 'center',
@@ -581,17 +558,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   description: {
-    fontSize: typography.sizeMedium,
+    fontSize: typography.sizeRegular,
     fontWeight: typography.weightSemiBold,
     color: colors.textPrimary,
   },
-  category: {
-    fontSize: typography.sizeSmall,
-    color: colors.textSecondary,
+  dateContainerRow: {
+    flexDirection: 'column',
     marginTop: 2,
   },
+  dateText: {
+    fontSize: typography.sizeSmall,
+    color: colors.textSecondary,
+  },
+  archiveText: {
+    fontSize: typography.sizeSmall,
+    color: colors.textTertiary,
+    marginTop: 1,
+  },
   amount: {
-    fontSize: typography.sizeLarge,
+    fontSize: typography.sizeMedium,
     fontWeight: typography.weightBold,
   },
   emptyContainer: {
