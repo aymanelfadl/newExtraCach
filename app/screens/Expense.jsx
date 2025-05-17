@@ -308,6 +308,7 @@ const Expense = () => {
         onEditPress={handleEditPress}
         emptyMessage="Aucune dépense trouvée"
         isLoading={isLoading}
+        isExpenseScreen={true}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

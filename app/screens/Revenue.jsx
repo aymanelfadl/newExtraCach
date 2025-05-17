@@ -310,6 +310,7 @@ const Revenue = () => {
         emptyMessage="Aucun revenu trouvé"
         isLoading={isLoading}
         numColumns={1}
+        isExpenseScreen={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

@@ -22,7 +22,8 @@ const CardList = ({
   onEditPress,
   emptyMessage = "Aucun élément trouvé",
   isLoading = false,
-  refreshControl
+  refreshControl,
+  isExpenseScreen = false // Flag to determine if this is expense or revenue screen
 }) => {
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -30,11 +31,35 @@ const CardList = ({
   const [monthsMenuVisible, setMonthsMenuVisible] = useState(false);
   const [availableMonths, setAvailableMonths] = useState(['Tous']);
   const [filteredData, setFilteredData] = useState(data);
+  const [allMonths, setAllMonths] = useState([]);
 
-  // Extract available months from data
   useEffect(() => {
+    const monthNames = {
+      '01': 'Janvier',
+      '02': 'Février',
+      '03': 'Mars',
+      '04': 'Avril',
+      '05': 'Mai', 
+      '06': 'Juin',
+      '07': 'Juillet',
+      '08': 'Août',
+      '09': 'Septembre',
+      '10': 'Octobre',
+      '11': 'Novembre',
+      '12': 'Décembre'
+    };
+    
+    const currentYear = new Date().getFullYear().toString();
+    
+    // Create array with all months for current year in chronological order
+    const allMonthsArray = Object.entries(monthNames)
+      .sort(([numA], [numB]) => parseInt(numA) - parseInt(numB))
+      .map(([num, name]) => {
+        return { num, name, year: currentYear };
+      });
+    setAllMonths(allMonthsArray);
+    
     if (data && data.length > 0) {
-      // Extract month and year from dateAdded (format: DD/MM/YYYY)
       const months = data.map(item => {
         const dateParts = (item.dateAdded || '').split('/');
         if (dateParts.length === 3) {
@@ -47,22 +72,6 @@ const CardList = ({
 
       // Get unique months
       const uniqueMonths = ['Tous', ...new Set(months)];
-      
-      // Map numeric months to names
-      const monthNames = {
-        '01': 'Janvier',
-        '02': 'Février',
-        '03': 'Mars',
-        '04': 'Avril',
-        '05': 'Mai', 
-        '06': 'Juin',
-        '07': 'Juillet',
-        '08': 'Août',
-        '09': 'Septembre',
-        '10': 'Octobre',
-        '11': 'Novembre',
-        '12': 'Décembre'
-      };
       
       // Format months as "Month Year"
       const formattedMonths = uniqueMonths.map(month => {
@@ -177,11 +186,29 @@ const CardList = ({
     <View style={styles.container}>
       {/* Month filter button */}
       <TouchableOpacity 
-        style={styles.monthFilterButton}
+        style={[
+          styles.monthFilterButton,
+          {
+            borderWidth: 1, 
+            borderColor: isExpenseScreen ? colors.expense : colors.income,
+            backgroundColor: selectedMonth !== 'Tous' 
+              ? (isExpenseScreen ? `${colors.expense}10` : `${colors.income}10`) 
+              : colors.card
+          }
+        ]}
         onPress={() => setMonthsMenuVisible(true)}
       >
-        <Text style={styles.monthFilterText}>{selectedMonth}</Text>
-        <Icon name="chevron-down" size={20} color={colors.textPrimary} />
+        <Text style={[
+          styles.monthFilterText, 
+          {color: isExpenseScreen ? colors.expense : colors.income}
+        ]}>
+          {selectedMonth}
+        </Text>
+        <Icon 
+          name="chevron-down" 
+          size={20} 
+          color={isExpenseScreen ? colors.expense : colors.income} 
+        />
       </TouchableOpacity>
       
       {/* Items list */}
@@ -262,35 +289,101 @@ const CardList = ({
           onPress={() => setMonthsMenuVisible(false)}
         >
           <View style={styles.monthsMenu}>
-            <Text style={styles.monthsMenuTitle}>Sélectionner un mois</Text>
+            <View style={[styles.monthsMenuHeader, {backgroundColor: isExpenseScreen ? `${colors.expense}10` : `${colors.income}10`}]}>
+              <Text style={[styles.monthsMenuTitle, {color: isExpenseScreen ? colors.expense : colors.income}]}>
+                Sélectionner un mois
+              </Text>
+            </View>
             <View style={styles.divider} />
             
             <ScrollView style={styles.monthsList}>
-              {availableMonths.map((month, index) => (
-                <TouchableOpacity
-                  key={index}
+              {/* All option */}
+              <TouchableOpacity
+                key="all"
+                style={[
+                  styles.monthItem,
+                  selectedMonth === 'Tous' && { 
+                    backgroundColor: isExpenseScreen 
+                      ? `${colors.expense}20`  // Red background for expense
+                      : `${colors.income}10`   // Green background for revenue
+                  }
+                ]}
+                onPress={() => {
+                  setSelectedMonth('Tous');
+                  setMonthsMenuVisible(false);
+                }}
+              >
+                <Text 
                   style={[
-                    styles.monthItem,
-                    selectedMonth === month && styles.selectedMonthItem
+                    styles.monthItemText,
+                    selectedMonth === 'Tous' && { 
+                      fontWeight: typography.weightSemiBold,
+                      color: isExpenseScreen ? colors.expense : colors.income
+                    }
                   ]}
-                  onPress={() => {
-                    setSelectedMonth(month);
-                    setMonthsMenuVisible(false);
-                  }}
                 >
-                  <Text 
+                  Tous
+                </Text>
+                {selectedMonth === 'Tous' && (
+                  <Icon name="check" size={20} color={isExpenseScreen ? colors.expense : colors.income} />
+                )}
+              </TouchableOpacity>
+              
+              {/* Month list */}
+              {allMonths.map((month, index) => {
+                const monthYear = `${month.name} ${month.year}`;
+                const isMonthInData = availableMonths.includes(monthYear);
+                const isSelected = selectedMonth === monthYear;
+                
+                // Determine if this is the current month
+                const today = new Date();
+                const isCurrentMonth = month.num === String(today.getMonth() + 1).padStart(2, '0') && 
+                                      month.year === today.getFullYear().toString();
+                
+                // Determine color based on isExpenseScreen prop
+                const monthColor = isExpenseScreen ? colors.expense : colors.income;
+                
+                return (
+                  <TouchableOpacity
+                    key={index}
                     style={[
-                      styles.monthItemText,
-                      selectedMonth === month && styles.selectedMonthItemText
+                      styles.monthItem,
+                      isSelected && { 
+                        backgroundColor: isExpenseScreen 
+                          ? `${colors.expense}20`  // Red background for expense
+                          : `${colors.income}10`   // Green background for revenue
+                      },
+                      isCurrentMonth && { borderLeftWidth: 3, borderLeftColor: monthColor }
                     ]}
+                    onPress={() => {
+                      setSelectedMonth(monthYear);
+                      setMonthsMenuVisible(false);
+                    }}
                   >
-                    {month}
-                  </Text>
-                  {selectedMonth === month && (
-                    <Icon name="check" size={20} color={colors.income} />
-                  )}
-                </TouchableOpacity>
-              ))}
+                    <Text 
+                      style={[
+                        styles.monthItemText,
+                        // Only highlight months with data when "Tous" is selected
+                        selectedMonth === 'Tous' && isMonthInData 
+                          ? { color: isExpenseScreen ? colors.expense : colors.income, opacity: 0.8 } 
+                          : null,
+                        // Current month indicator
+                        isCurrentMonth && { fontWeight: typography.weightMedium },
+                        // Full highlight for selected month
+                        isSelected && { 
+                          fontWeight: typography.weightSemiBold, 
+                          color: monthColor 
+                        }
+                      ]}
+                    >
+                      {monthYear}
+                    </Text>
+                    {isSelected && (
+                      <Icon name="check" size={20} color={monthColor} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </TouchableOpacity>
@@ -366,15 +459,19 @@ const styles = StyleSheet.create({
     ...shadows.large,
     overflow: 'hidden',
   },
+  monthsMenuHeader: {
+    paddingVertical: spacing.medium,
+    paddingHorizontal: spacing.large,
+    width: '100%',
+  },
   monthsMenuTitle: {
     fontSize: typography.sizeLarge,
     fontWeight: typography.weightSemiBold,
-    color: colors.textPrimary,
-    padding: spacing.medium,
     textAlign: 'center',
   },
   monthsList: {
-    maxHeight: height * 0.5,
+    maxHeight: height * 0.6,
+    paddingBottom: spacing.medium,
   },
   monthItem: {
     flexDirection: 'row',
@@ -384,16 +481,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  selectedMonthItem: {
-    backgroundColor: `${colors.income}10`,
-  },
   monthItemText: {
     fontSize: typography.sizeRegular,
     color: colors.textPrimary,
-  },
-  selectedMonthItemText: {
-    fontWeight: typography.weightSemiBold,
-    color: colors.income,
   },
   emptyContainer: {
     padding: spacing.large,
