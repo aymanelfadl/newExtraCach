@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { colors, typography, spacing, shadows, borderRadius } from '../../styles/theme';
 
 const SplashScreen = () => {
   console.log("SplashScreen rendered");
-  const [imageError, setImageError] = useState(false);
   
   // Animation values
   const scaleAnim = new Animated.Value(0.5);
@@ -30,7 +29,7 @@ const SplashScreen = () => {
         toValue: 1,
         duration: 400,
         useNativeDriver: true,
-        easing: Easing.out(Easing.back(1.7)),
+        easing: Easing.out(Easing.back(1.5)),
       }),
       
       // Fade in and slide up text
@@ -65,18 +64,7 @@ const SplashScreen = () => {
     <View style={styles.container}>
       <View style={styles.content}>
         <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
-          {!imageError ? (
-            <Image 
-              source={require('../../assets/images/income.png')} 
-              style={styles.logo}
-              resizeMode="contain"
-              onError={() => {
-                console.log("Image failed to load");
-                setImageError(true);
-              }}
-            />
-          ) : null}
-          <Text style={[styles.logoText, imageError && {opacity: 1}]}>EC</Text>
+          <Text style={styles.logoText}>EC</Text>
         </Animated.View>
         
         <Animated.View style={textAnimatedStyle}>
@@ -100,8 +88,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: spacing.large,
     paddingHorizontal: spacing.large,
-    borderWidth: 3,
-    borderColor: 'transparent',
   },
   content: {
     flex: 1,
@@ -120,16 +106,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary,
   },
-  logo: {
-    width: 150,
-    height: 150,
-  },
   logoText: {
-    position: 'absolute',
-    fontSize: 42,
+    fontSize: 72,
     fontWeight: typography.weightBold,
     color: colors.primary,
-    opacity: 0.3,
   },
   appName: {
     fontSize: typography.sizeXXLarge,

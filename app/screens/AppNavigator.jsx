@@ -2,7 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { TabNavigator } from '../../components/Navigation';
 import EmployeeDetail from '../../components/EmployeeDetail';
 import LogIn from './LogIn';
-import SplashScreen from './SplashScreen';
+import SplashScreen from './SplashScreen3';
 import { useUser } from '../../context/UserContext';
 import AddSharedUser from '../../components/AddSharedUser';
 import ArchivedTransactions from './ArchivedTransactions';
@@ -15,11 +15,24 @@ const AppNavigator = () => {
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsInitializing(false), 2000);
+    // Show splash screen for 4 seconds
+    console.log("AppNavigator: Starting splash screen timer");
+    const timer = setTimeout(() => {
+      console.log("AppNavigator: Splash screen timer completed");
+      setIsInitializing(false);
+    }, 4000);
     return () => clearTimeout(timer);
   }, []);
   
-  if (loading || isInitializing) return <SplashScreen />;
+  console.log("AppNavigator: loading=", loading, "isInitializing=", isInitializing);
+  
+  if (isInitializing) {
+    return <SplashScreen />;
+  }
+  
+  if (loading) {
+    return <SplashScreen />;
+  }
   
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
