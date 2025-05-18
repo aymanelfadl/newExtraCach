@@ -24,16 +24,12 @@ const AppNavigator = () => {
     return () => clearTimeout(timer);
   }, []);
   
-  console.log("AppNavigator: loading=", loading, "isInitializing=", isInitializing);
-  
   if (isInitializing) {
     return <SplashScreen />;
   }
-  
   if (loading) {
     return <SplashScreen />;
   }
-  
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (
