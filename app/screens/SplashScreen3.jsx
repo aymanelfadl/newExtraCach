@@ -4,7 +4,6 @@ import { colors, typography, spacing, shadows, borderRadius } from '../../styles
 
 const SplashScreen = () => {
   console.log("SplashScreen rendered");
-  const [imageError, setImageError] = useState(false);
   
   // Animation values
   const scaleAnim = new Animated.Value(0.5);
@@ -65,18 +64,12 @@ const SplashScreen = () => {
     <View style={styles.container}>
       <View style={styles.content}>
         <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
-          {!imageError ? (
-            <Image 
-              source={require('../../assets/images/income.png')} 
-              style={styles.logo}
-              resizeMode="contain"
-              onError={() => {
-                console.log("Image failed to load");
-                setImageError(true);
-              }}
-            />
-          ) : null}
-          <Text style={[styles.logoText, imageError && {opacity: 1}]}>EC</Text>
+          <Image 
+            source={require('../../assets/images/logologo.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.logoText}>EC</Text>
         </Animated.View>
         
         <Animated.View style={textAnimatedStyle}>
@@ -95,13 +88,11 @@ const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
     paddingBottom: spacing.large,
     paddingHorizontal: spacing.large,
-    borderWidth: 3,
-    borderColor: 'transparent',
   },
   content: {
     flex: 1,
@@ -112,13 +103,20 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: borderRadius.round,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.large,
-    ...shadows.medium,
-    borderWidth: 2,
-    borderColor: colors.primary,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 8,
   },
   logo: {
     width: 150,
@@ -126,15 +124,15 @@ const styles = StyleSheet.create({
   },
   logoText: {
     position: 'absolute',
-    fontSize: 42,
-    fontWeight: typography.weightBold,
-    color: colors.primary,
-    opacity: 0.3,
+    fontSize: 60,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    opacity: 0.9,
   },
   appName: {
     fontSize: typography.sizeXXLarge,
     fontWeight: typography.weightBold,
-    color: colors.primary,
+    color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: spacing.small,
     letterSpacing: 0.5,
