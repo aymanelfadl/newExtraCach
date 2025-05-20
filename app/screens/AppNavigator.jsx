@@ -2,34 +2,24 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { TabNavigator } from '../../components/Navigation';
 import EmployeeDetail from '../../components/EmployeeDetail';
 import LogIn from './LogIn';
-import SplashScreen from './SplashScreen3';
 import { useUser } from '../../context/UserContext';
 import AddSharedUser from '../../components/AddSharedUser';
 import ArchivedTransactions from './ArchivedTransactions';
-import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
   const { user, loading } = useUser();
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    // Show splash screen for 4 seconds
-    console.log("AppNavigator: Starting splash screen timer");
-    const timer = setTimeout(() => {
-      console.log("AppNavigator: Splash screen timer completed");
-      setIsInitializing(false);
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, []);
   
-  if (isInitializing) {
-    return <SplashScreen />;
-  }
   if (loading) {
-    return <SplashScreen />;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (
