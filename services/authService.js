@@ -9,8 +9,26 @@ const VIEWING_AS_KEY = '@financial_app:viewingAs';
 export const authService = {
   register: async (email, password, fullName) => {
     try {
+      // Check if Firebase auth is initialized
+      if (!auth) {
+        console.error('Firebase auth not initialized');
+        return { success: false, error: 'Service d\'authentification non disponible. Veuillez redémarrer l\'application.' };
+      }
+      
+      // Check email validity before attempting registration
+      if (!email || !email.includes('@')) {
+        return { success: false, error: 'Adresse e-mail invalide.' };
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
+      // Check if Firestore is initialized
+      if (!db) {
+        console.error('Firestore not initialized');
+        return { success: false, error: 'Compte créé, mais problème de connexion à la base de données. Veuillez vous connecter.' };
+      }
+      
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
         email: email,
@@ -26,18 +44,51 @@ export const authService = {
       }));
       return { success: true, user };
     } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, error: error.message };
+      console.error('Registration error:', error.code, error.message);
+      
+      let message = 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.';
+      if (error.code === 'auth/email-already-in-use') {
+        message = 'Cette adresse e-mail est déjà utilisée par un autre compte.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'L\'adresse e-mail est invalide.';
+      } else if (error.code === 'auth/weak-password') {
+        message = 'Le mot de passe est trop faible. Utilisez au moins 6 caractères.';
+      } else if (error.code === 'auth/network-request-failed') {
+        message = 'Problème de connexion réseau. Veuillez vérifier votre connexion internet.';
+      } else if (error.code === 'auth/internal-error') {
+        message = 'Erreur interne. Veuillez réessayer plus tard.';
+      }
+      
+      return { success: false, error: message };
     }
   },
 
   login: async (email, password) => {
     try {
+      console.log('Login attempt for email:', email);
+      
+      // Check if Firebase auth is initialized
+      if (!auth) {
+        console.error('Firebase auth not initialized');
+        return { success: false, error: 'Service d\'authentification non disponible. Veuillez redémarrer l\'application.' };
+      }
+      
+      console.log('Firebase auth available, attempting sign in...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      console.log('Sign in successful, user ID:', user.uid);
+      
+      // Check if Firestore is initialized
+      if (!db) {
+        console.error('Firestore not initialized');
+        return { success: false, error: 'Service de base de données non disponible. Veuillez vérifier votre connexion internet.' };
+      }
+      
+      console.log('Fetching user document from Firestore...');
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
+        console.log('User document exists, saving to AsyncStorage...');
         await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify({
           uid: user.uid,
           email: user.email,
@@ -47,24 +98,33 @@ export const authService = {
         }));
         return { success: true, user: { ...user, ...userData } };
       } else {
-        throw new Error('User profile not found');
+        console.error('User document not found in Firestore');
+        throw new Error('Profile utilisateur non trouvé. Veuillez contacter le support.');
       }
     } catch (error) {
+      console.error('Login error details:', error.code, error.message, error.stack);
+      
       let message = 'Une erreur est survenue. Veuillez réessayer.';
       if (
         error.code === 'auth/wrong-password' ||
-        error.code === 'auth/invalid-credential'
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/invalid-login-credentials'
       ) {
         message = 'E-mail ou mot de passe incorrect.';
       } else if (error.code === 'auth/user-not-found') {
         message = "Aucun utilisateur trouvé avec cet e-mail.";
       } else if (error.code === 'auth/too-many-requests') {
         message = "Trop de tentatives échouées. Veuillez réessayer plus tard.";
-      }else if (error.code === 'auth/invalid-email') {
+      } else if (error.code === 'auth/invalid-email') {
         message = "L'e-mail est invalide.";
-      }else if (error.code === 'auth/email-already-in-use') {
+      } else if (error.code === 'auth/email-already-in-use') {
         message = "L'e-mail est déjà utilisé.";
+      } else if (error.code === 'auth/network-request-failed') {
+        message = "Problème de connexion réseau. Veuillez vérifier votre connexion internet.";
+      } else if (error.code === 'auth/internal-error') {
+        message = "Erreur interne. Veuillez réessayer plus tard.";
       }
+      
       return { success: false, error: message };
     }
   },

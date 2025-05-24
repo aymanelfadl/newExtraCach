@@ -1,8 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../../styles/theme';
+import Constants from 'expo-constants';
 
-const SplashScreen = () => {
+// Renamed to CustomSplashScreen to avoid naming conflicts with expo-splash-screen
+const CustomSplashScreen = ({ showLoader = true }) => {
+  // Get version from app.json
+  const appVersion = Constants.expoConfig?.version || '1.0.2';
+  
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -17,10 +22,18 @@ const SplashScreen = () => {
         <View style={styles.textContainer}>
           <Text style={styles.appName}>ExtraCash</Text>
           <Text style={styles.tagline}>Gérez vos finances en toute simplicité</Text>
+          
+          {showLoader && (
+            <ActivityIndicator 
+              size="large" 
+              color="#4A90E2" 
+              style={{ marginTop: spacing.large }}
+            />
+          )}
         </View>
       </View>
 
-      <Text style={styles.versionText}>Version 1.2.0</Text>
+      <Text style={styles.versionText}>Version {appVersion}</Text>
     </View>
   );
 };
@@ -85,4 +98,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SplashScreen;
+export default CustomSplashScreen;

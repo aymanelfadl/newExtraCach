@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth } from '../services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { ActivityIndicator, View, Text, Alert } from 'react-native';
+import { ActivityIndicator, View, Text, Alert, Image, TouchableOpacity } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const UserContext = createContext(null);
 
@@ -143,8 +144,64 @@ export const UserProvider = ({ children }) => {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF'
+      }}>
+        <Image 
+          source={require('../assets/images/exchanging.png')} 
+          style={{ width: 100, height: 100, marginBottom: 20 }}
+          resizeMode="contain"
+        />
+        <ActivityIndicator size="large" color="#4A90E2" style={{ marginBottom: 10 }} />
+        <Text style={{ fontSize: 16, marginTop: 10, color: '#555' }}>
+          Chargement en cours...
+        </Text>
+      </View>
+    );
+  }
+  
+  if (authError) {
+    return (
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        padding: 20
+      }}>
+        <Icon name="alert-circle-outline" size={50} color="#E74C3C" />
+        <Text style={{ 
+          fontSize: 18, 
+          fontWeight: 'bold', 
+          marginTop: 20, 
+          marginBottom: 10,
+          color: '#E74C3C',
+          textAlign: 'center'
+        }}>
+          Problème d'authentification
+        </Text>
+        <Text style={{ 
+          fontSize: 16, 
+          textAlign: 'center',
+          color: '#555',
+          marginBottom: 20
+        }}>
+          {authError}
+        </Text>
+        <TouchableOpacity 
+          style={{
+            backgroundColor: '#4A90E2',
+            paddingVertical: 12,
+            paddingHorizontal: 20,
+            borderRadius: 6
+          }}
+          onPress={() => auth.signOut().catch(console.error)}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>Réessayer</Text>
+        </TouchableOpacity>
       </View>
     );
   }

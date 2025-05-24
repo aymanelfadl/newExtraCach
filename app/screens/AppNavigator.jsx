@@ -5,17 +5,36 @@ import LogIn from './LogIn';
 import { useUser } from '../../context/UserContext';
 import AddSharedUser from '../../components/AddSharedUser';
 import ArchivedTransactions from './ArchivedTransactions';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text, Image } from 'react-native';
+import { useEffect } from 'react';
 
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
   const { user, loading } = useUser();
   
+  useEffect(() => {
+    // Log navigation state for debugging
+    console.log('AppNavigator state:', { isLoading: loading, hasUser: !!user });
+  }, [loading, user]);
+  
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF' 
+      }}>
+        <Image 
+          source={require('../../assets/images/exchanging.png')} 
+          style={{ width: 100, height: 100, marginBottom: 20 }}
+          resizeMode="contain"
+        />
+        <ActivityIndicator size="large" color="#4A90E2" style={{ marginBottom: 10 }} />
+        <Text style={{ fontSize: 16, marginTop: 10, color: '#555' }}>
+          Chargement de l'application...
+        </Text>
       </View>
     );
   }

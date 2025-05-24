@@ -53,8 +53,8 @@ const Header = ({ screenName, onSearching }) => {
         </View>
       ) : (
         <View style={styles.titleContainer}>
-                <Text style={[styles.title, { color: getColor(screenName) }]}>{screenName}</Text>
-                {onSearching && (
+          <Text style={[styles.title, { color: getColor(screenName) }]}>{screenName}</Text>
+          {onSearching && (
             <TouchableOpacity onPress={toggleSearch} style={styles.searchButton}>
               <Icon name="magnify" size={24} color={getColor(screenName)} />
             </TouchableOpacity>
@@ -68,12 +68,14 @@ const Header = ({ screenName, onSearching }) => {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
-    paddingTop: spacing.medium,
-    paddingBottom: spacing.medium,
+    paddingVertical: spacing.large,
     paddingHorizontal: spacing.medium,
+    justifyContent: 'center',
+    minHeight: 70,
     ...shadows.small,
   },
   titleContainer: {
+    paddingTop:spacing.medium,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -82,6 +84,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizeXLarge,
     fontWeight: typography.weightBold,
     color: colors.primary,
+    textAlign: 'center',
   },
   searchButton: {
     padding: spacing.small,
@@ -89,6 +92,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.background,
     borderRadius: borderRadius.medium,
     paddingHorizontal: spacing.medium,

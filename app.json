@@ -2,7 +2,7 @@
   "expo": {
     "name": "extracash-app",
     "slug": "extracash-app",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/logologo.png",
     "scheme": "myapp",
@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/logologo.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.aymanelfadl.extracashapp1"
+      "package": "com.aymanelfadl.extracashapp1",
+      "versionCode": 17
     },
     "web": {
       "bundler": "metro",

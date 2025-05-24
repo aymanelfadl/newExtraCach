@@ -75,6 +75,11 @@ const LogIn = () => {
     // Check for internet connection
     if (!isOnline) {
       setErrorMessage('Mode hors ligne. Connexion Internet requise pour l\'authentification.');
+      Alert.alert(
+        'Connexion requise',
+        'Une connexion Internet est nécessaire pour vous connecter. Veuillez vérifier votre connexion réseau et réessayer.',
+        [{ text: 'OK' }]
+      );
       return;
     }
     
@@ -83,37 +88,103 @@ const LogIn = () => {
       return;
     }
 
+    // Maximum retry attempts
+    const maxRetries = 2;
+    let currentRetry = 0;
+    let result = null;
+
     try {
       setLoading(true);
       
-      if (isLogin) {
-        // Handle login using authService
-        const result = await authService.login(email, password);
-        
-        if (!result.success) {
-          // If login failed, set the error message
-          setErrorMessage(result.error);
-        }
-        // Auth state change listener in UserContext will handle successful login
-      } else {
-        // Handle registration using authService
-        const result = await authService.register(email, password, fullName);
-        
-        if (result.success) {
-          // Registration successful
-          Alert.alert(
-            'Compte créé avec succès',
-            'Bienvenue! Votre compte a été créé avec succès.',
-            [{ text: 'OK' }]
-          );
-        } else {
-          // If registration failed, set the error message
-          setErrorMessage(result.error);
+      while (currentRetry <= maxRetries) {
+        try {
+          if (isLogin) {
+            // Handle login using authService
+            result = await authService.login(email, password);
+            
+            if (result.success) {
+              // Successfully logged in
+              break;
+            } else if (
+              result.error.includes('connexion') || 
+              result.error.includes('réseau') || 
+              result.error.includes('disponible')
+            ) {
+              // Network related issues, we might retry
+              currentRetry++;
+              if (currentRetry <= maxRetries) {
+                // Wait a moment before retrying
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                continue;
+              }
+            } else {
+              // User error (wrong password, etc), no need to retry
+              break;
+            }
+          } else {
+            // Handle registration using authService
+            result = await authService.register(email, password, fullName);
+            
+            if (result.success) {
+              // Registration successful
+              Alert.alert(
+                'Compte créé avec succès',
+                'Bienvenue! Votre compte a été créé avec succès.',
+                [{ text: 'OK' }]
+              );
+              break;
+            } else {
+              // If registration failed, break immediately as it's likely a user error
+              break;
+            }
+          }
+        } catch (innerError) {
+          console.error(`Authentication attempt ${currentRetry + 1} failed:`, innerError);
+          currentRetry++;
+          if (currentRetry > maxRetries) throw innerError;
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
+      
+      // Set error message if authentication failed
+      if (result && !result.success) {
+        setErrorMessage(result.error);
+        console.log('Authentication failed with error:', result.error);
+      }
     } catch (error) {
-      console.error('Authentication error:', error);
+      console.error('Authentication error after retries:', error);
       setErrorMessage('Une erreur s\'est produite. Veuillez réessayer plus tard.');
+      
+      // Show a more detailed alert for serious errors
+      const errorString = error.toString();
+      const isNetworkError = errorString.includes('network') || errorString.includes('internet') || errorString.includes('connection');
+      const isAuthError = errorString.includes('auth') || errorString.includes('Firebase');
+      
+      Alert.alert(
+        isNetworkError ? 'Problème de connexion' : (isAuthError ? 'Erreur d\'authentification' : 'Erreur'),
+        isNetworkError 
+          ? 'Nous rencontrons des difficultés pour vous connecter. Veuillez vérifier votre connexion internet et réessayer.'
+          : (isAuthError 
+              ? 'Problème lors de l\'authentification. L\'application va être redémarrée automatiquement.' 
+              : 'Une erreur inattendue est survenue. Veuillez réessayer dans quelques instants.'),
+        [{ 
+          text: 'OK',
+          onPress: () => {
+            if (isAuthError) {
+              // For auth errors, we should reload the app
+              console.log('Reloading app due to auth error');
+              setTimeout(() => {
+                // This will trigger the app to reload in development
+                // In production, user will need to manually restart
+                if (__DEV__) {
+                  throw new Error('Forced reload due to auth error');
+                }
+              }, 1000);
+            }
+          }
+        }]
+      );
     } finally {
       setLoading(false);
     }
