@@ -3,10 +3,10 @@ import { auth } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import { ActivityIndicator, View, Text, Alert } from 'react-native';
 
 const UserContext = createContext(null);
 
-// Standardized keys
 const USER_DATA_KEY = '@financial_app:currentUser';
 const VIEWING_AS_KEY = '@financial_app:viewingAs';
 
@@ -15,76 +15,112 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [viewingAs, setViewingAs] = useState(null);
+  const [authError, setAuthError] = useState(null);
 
+  // Monitor network status
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
+    const unsubscribeNet = NetInfo.addEventListener(state => {
       setIsOnline(state.isConnected && state.isInternetReachable);
     });
-    return () => unsubscribe();
+
+    return () => unsubscribeNet();
   }, []);
 
+  // Authentication listener with improved error handling
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      try {
-        if (authUser) {
-          // User is signed in
-          const userData = {
-            uid: authUser.uid,
-            email: authUser.email,
-            fullName: authUser.displayName || '', // use fullName for consistency
-            photoURL: authUser.photoURL,
-            emailVerified: authUser.emailVerified,
-            lastLoginAt: new Date().toISOString(),
-          };
-          await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
-          const viewingAsData = await AsyncStorage.getItem(VIEWING_AS_KEY);
-          if (viewingAsData) setViewingAs(JSON.parse(viewingAsData));
-          setUser(userData);
-        } else {
-          await AsyncStorage.removeItem(USER_DATA_KEY);
-          await AsyncStorage.removeItem(VIEWING_AS_KEY);
-          setUser(null);
-          setViewingAs(null);
+    let isMounted = true;
+    let authTimeout;
+
+    try {
+      // Set a timeout for authentication to prevent hanging indefinitely
+      authTimeout = setTimeout(() => {
+        if (loading && isMounted) {
+          console.log('Auth timeout reached, proceeding with null user');
+          setLoading(false);
+          setAuthError('Authentication timed out. Please check your connection.');
         }
-      } catch (error) {
-        console.error("Error handling auth state change:", error);
-      } finally {
+      }, 15000); // 15 seconds timeout
+
+      const unsubscribeAuth = onAuthStateChanged(auth, async (authUser) => {
+        try {
+          if (!isMounted) return;
+          
+          clearTimeout(authTimeout);
+          
+          if (authUser) {
+            const userData = {
+              uid: authUser.uid,
+              email: authUser.email,
+              fullName: authUser.displayName || '',
+              photoURL: authUser.photoURL,
+              emailVerified: authUser.emailVerified,
+              lastLoginAt: new Date().toISOString(),
+            };
+            await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+            const viewingAsData = await AsyncStorage.getItem(VIEWING_AS_KEY);
+            setUser(userData);
+            setViewingAs(viewingAsData ? JSON.parse(viewingAsData) : null);
+          } else if (!authUser && !isOnline) {
+            const savedUser = await AsyncStorage.getItem(USER_DATA_KEY);
+            if (savedUser) {
+              setUser(JSON.parse(savedUser));
+              const viewingAsData = await AsyncStorage.getItem(VIEWING_AS_KEY);
+              setViewingAs(viewingAsData ? JSON.parse(viewingAsData) : null);
+            } else {
+              setUser(null);
+              setViewingAs(null);
+            }
+          } else {
+            await AsyncStorage.multiRemove([USER_DATA_KEY, VIEWING_AS_KEY]);
+            setUser(null);
+            setViewingAs(null);
+          }
+        } catch (error) {
+          console.error('🔥 Auth handler error:', error);
+          setAuthError(error.message);
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
+      }, (error) => {
+        // This is the error callback for onAuthStateChanged
+        console.error('Auth state change error:', error);
+        if (isMounted) {
+          setAuthError(error.message);
+          setLoading(false);
+        }
+      });
+
+      return () => {
+        isMounted = false;
+        clearTimeout(authTimeout);
+        unsubscribeAuth();
+      };
+    } catch (error) {
+      console.error('Failed to setup auth listener:', error);
+      if (isMounted) {
+        setAuthError(error.message);
         setLoading(false);
       }
-    });
-
-    const loadOfflineUserData = async () => {
-      try {
-        const userData = await AsyncStorage.getItem(USER_DATA_KEY);
-        if (userData && !user) {
-          setUser(JSON.parse(userData));
-          const viewingAsData = await AsyncStorage.getItem(VIEWING_AS_KEY);
-          if (viewingAsData) setViewingAs(JSON.parse(viewingAsData));
-        }
-      } catch (error) {
-        console.error("Error loading offline user data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadOfflineUserData();
-    return () => unsubscribe();
+      return () => {
+        isMounted = false;
+        clearTimeout(authTimeout);
+      };
+    }
   }, []);
 
   const setViewingAsUser = async (targetUser) => {
     try {
-      if (targetUser){
+      if (targetUser) {
         await AsyncStorage.setItem(VIEWING_AS_KEY, JSON.stringify(targetUser));
         setViewingAs(targetUser);
       } else {
         await AsyncStorage.removeItem(VIEWING_AS_KEY);
         setViewingAs(null);
       }
-      return { success: true };
     } catch (error) {
-      console.error("Error setting viewing as user:", error);
-      return { success: false, error: error.message };
+      console.error("setViewingAsUser error:", error);
     }
   };
 
@@ -105,6 +141,14 @@ export const UserProvider = ({ children }) => {
     networkStatus: isOnline ? "online" : "offline"
   };
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   return (
     <UserContext.Provider value={value}>
       {children}
@@ -114,10 +158,6 @@ export const UserProvider = ({ children }) => {
 
 export const useUser = () => {
   const context = useContext(UserContext);
-  if (!context) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
+  if (!context) throw new Error('useUser must be used within a UserProvider');
   return context;
 };
-
-export default UserContext;
