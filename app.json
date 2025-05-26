@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aymanelfadl.extracashapp1"
     },
     "android": {
       "adaptiveIcon": {
@@ -36,8 +37,7 @@
       "expo-asset",
       "expo-secure-store"
     ],
-    "experiments": {
-    },
+    "experiments": {},
     "extra": {
       "eas": {
         "projectId": "0bd66fed-58dd-468b-8ff6-0a67225eb8e2"

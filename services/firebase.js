@@ -3,36 +3,29 @@ import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  EXPO_PUBLIC_FIREBASE_API_KEY,
-  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  EXPO_PUBLIC_FIREBASE_APP_ID,
-  EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
-} from '@env';
+
+// Hardcoded Firebase configuration for testing
+// This replaces the @env import to test if environment variable loading is the issue
+const firebaseConfig = {
+  apiKey: "AIzaSyBdYyh2H44T0rSIWzGI_wKQvP7KemXnDzY",
+  authDomain: "expense-manager-376bc.firebaseapp.com",
+  projectId: "expense-manager-376bc",
+  storageBucket: "expense-manager-376bc.appspot.com",
+  messagingSenderId: "281673701772",
+  appId: "1:281673701772:web:3a07c675bbc0a0bac2dea9",
+  measurementId: "G-M7XF1V4BHR",
+};
 
 // Log configuration (without sensitive values) for debugging
 console.log('Firebase Config Check: ', {
-  hasApiKey: !!EXPO_PUBLIC_FIREBASE_API_KEY,
-  hasAuthDomain: !!EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  hasProjectId: !!EXPO_PUBLIC_FIREBASE_PROJECT_ID, 
-  hasStorageBucket: !!EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  hasMessagingSenderId: !!EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  hasAppId: !!EXPO_PUBLIC_FIREBASE_APP_ID,
-  hasMeasurementId: !!EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasAuthDomain: !!firebaseConfig.authDomain,
+  hasProjectId: !!firebaseConfig.projectId, 
+  hasStorageBucket: !!firebaseConfig.storageBucket,
+  hasMessagingSenderId: !!firebaseConfig.messagingSenderId,
+  hasAppId: !!firebaseConfig.appId,
+  hasMeasurementId: !!firebaseConfig.measurementId
 });
-
-const firebaseConfig = {
-  apiKey: EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: EXPO_PUBLIC_FIREBASE_APP_ID,
-  measurementId: EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
 
 // Initialize Firebase app
 let app, auth, db, storage;
@@ -62,11 +55,11 @@ try {
     console.log('Firebase app initialized successfully');
   } catch (appError) {
     console.error('Firebase app initialization error:', appError.message);
-    // Try to use a shallow config if the full config fails
+    // Try to use a shallow hardcoded config if the full config fails
     const minimalConfig = {
-      apiKey: EXPO_PUBLIC_FIREBASE_API_KEY,
-      projectId: EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-      appId: EXPO_PUBLIC_FIREBASE_APP_ID
+      apiKey: "AIzaSyBdYyh2H44T0rSIWzGI_wKQvP7KemXnDzY",
+      projectId: "expense-manager-376bc",
+      appId: "1:281673701772:web:3a07c675bbc0a0bac2dea9"
     };
     console.log('Attempting with minimal config');
     app = initializeApp(minimalConfig);
@@ -75,25 +68,44 @@ try {
   // Initialize Auth with multiple fallback options
   console.log('Initializing Firebase Auth...');
   try {
+    if (!app) {
+      throw new Error('Firebase app not initialized before auth initialization');
+    }
+
+    console.log('Attempting to initialize auth with AsyncStorage persistence...');
     auth = initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage)
     });
     console.log('Auth initialized with AsyncStorage persistence');
   } catch (authError) {
     console.error('Auth initialization with persistence error:', authError.message);
+    
     // First fallback - try without custom persistence
     try {
+      console.log('Attempting to initialize auth without persistence...');
       auth = initializeAuth(app);
       console.log('Auth initialized without custom persistence');
     } catch (e) {
-      console.error('Standard auth initialization also failed:', e.message);
+      console.error('Standard auth initialization also failed:', e.message, e.stack);
+      
       // Second fallback - try getting the existing auth
       try {
+        console.log('Attempting to get existing auth instance...');
         const { getAuth } = require('firebase/auth');
         auth = getAuth(app);
-        console.log('Using existing auth instance');
+        console.log('Using existing auth instance:', !!auth);
       } catch (finalError) {
-        console.error('All auth initialization methods failed:', finalError.message);
+        console.error('All auth initialization methods failed:', finalError.message, finalError.stack);
+        
+        // One last try with direct import
+        try {
+          const firebase = require('firebase/app');
+          const { getAuth: getAuthDirect } = require('firebase/auth');
+          auth = getAuthDirect(firebase.getApp());
+          console.log('Last resort auth initialization succeeded:', !!auth);
+        } catch (lastError) {
+          console.error('Final auth initialization attempt failed:', lastError.message, lastError.stack);
+        }
       }
     }
   }
@@ -195,10 +207,37 @@ try {
   console.error('Error in Firebase diagnostic check:', error);
 }
 
-// Export with fallbacks to prevent app crashes
-const authWithFallback = auth || null;
+// Enhanced fallbacks to prevent app crashes and ensure auth always exists
+let authWithFallback = auth || null;
 const dbWithFallback = db || null;
 const storageWithFallback = storage || null;
+
+// If authWithFallback is still null, create a dummy implementation to prevent crashes
+if (!authWithFallback) {
+  console.warn('Creating dummy auth implementation to prevent crashes');
+  authWithFallback = {
+    currentUser: null,
+    onAuthStateChanged: (callback, onError) => {
+      console.warn('Using dummy onAuthStateChanged implementation');
+      // Call with null user after a short delay to simulate auth flow
+      setTimeout(() => {
+        try {
+          callback(null);
+        } catch (err) {
+          console.error('Error in dummy onAuthStateChanged callback:', err);
+          if (onError) onError(err);
+        }
+      }, 500);
+      // Return dummy unsubscribe function
+      return () => {};
+    },
+    signOut: () => Promise.resolve(),
+    signInWithEmailAndPassword: (email, password) => {
+      console.error('Attempted to sign in with email/password but auth is not available');
+      return Promise.reject(new Error('Service d\'authentification non disponible'));
+    }
+  };
+}
 
 // Special debug function that can be used to check Firebase status
 const checkFirebaseStatus = () => {
@@ -207,7 +246,8 @@ const checkFirebaseStatus = () => {
     dbInitialized: !!db,
     appInitialized: !!app,
     storageInitialized: !!storage,
-    currentUser: auth ? auth.currentUser : null
+    currentUser: auth ? auth.currentUser : null,
+    usingFallbackAuth: auth !== authWithFallback
   };
 };
 

@@ -18,6 +18,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, typography, spacing, borderRadius, shadows, commonStyles } from '../../styles/theme';
 import { authService } from '../../services/index';
 import { useUser } from '../../context/UserContext';
+// Import the Firebase recovery module for production environments
+import { recoverFirebaseAuth, getFirebaseDiagnostics } from '../../services/firebaseRecovery';
 
 const { width, height } = Dimensions.get('window');
 
@@ -86,15 +88,35 @@ const LogIn = () => {
     // Validate form
     if (!validateForm()) {
       return;
-    }
-
-    // Maximum retry attempts
+    }      // Maximum retry attempts
     const maxRetries = 2;
     let currentRetry = 0;
     let result = null;
 
     try {
       setLoading(true);
+      
+      // In production, check for Firebase health and try to recover if needed
+      if (!__DEV__ && currentRetry === 0) {
+        console.log('Production environment detected, running Firebase diagnostics...');
+        const diagnostics = getFirebaseDiagnostics();
+        console.log('Firebase diagnostics:', diagnostics);
+        
+        // If we detect issues with Firebase in production, try to recover
+        if (!diagnostics.hasAuth || !diagnostics.hasApp) {
+          console.log('Firebase services missing in production, attempting recovery...');
+          try {
+            const recoveryResult = await recoverFirebaseAuth();
+            if (recoveryResult.success) {
+              console.log('Firebase auth successfully recovered in production');
+            } else {
+              console.error('Firebase recovery failed:', recoveryResult.error);
+            }
+          } catch (recoveryError) {
+            console.error('Error during Firebase recovery:', recoveryError);
+          }
+        }
+      }
       
       while (currentRetry <= maxRetries) {
         try {
@@ -108,11 +130,23 @@ const LogIn = () => {
             } else if (
               result.error.includes('connexion') || 
               result.error.includes('réseau') || 
-              result.error.includes('disponible')
+              result.error.includes('disponible') ||
+              result.error.includes('authentification') ||
+              result.error.includes('timed out')
             ) {
-              // Network related issues, we might retry
+              // Network or service related issues, we might retry
               currentRetry++;
               if (currentRetry <= maxRetries) {
+                // If in production and not the last retry, try recovery
+                if (!__DEV__ && currentRetry < maxRetries) {
+                  try {
+                    console.log(`Retry ${currentRetry}: Attempting Firebase recovery...`);
+                    await recoverFirebaseAuth();
+                  } catch (e) {
+                    console.error('Firebase recovery failed during retry:', e);
+                  }
+                }
+                
                 // Wait a moment before retrying
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 continue;
@@ -158,29 +192,50 @@ const LogIn = () => {
       
       // Show a more detailed alert for serious errors
       const errorString = error.toString();
-      const isNetworkError = errorString.includes('network') || errorString.includes('internet') || errorString.includes('connection');
-      const isAuthError = errorString.includes('auth') || errorString.includes('Firebase');
+      const isNetworkError = errorString.includes('network') || errorString.includes('internet') || errorString.includes('connection') || errorString.includes('timed out');
+      const isAuthError = errorString.includes('auth') || errorString.includes('Firebase') || errorString.includes('authentication');
+      const isTimeoutError = errorString.includes('timed out') || errorString.includes('timeout') || errorString.includes('expirée');
+      
+      // For production environment, provide more specific guidance
+      let errorTitle = 'Erreur';
+      let errorMessage = 'Une erreur inattendue est survenue. Veuillez réessayer.';
+      
+      if (isTimeoutError) {
+        errorTitle = 'Délai d\'attente dépassé';
+        errorMessage = 'La connexion a pris trop de temps. Veuillez vérifier votre connexion internet et réessayer.';
+      } else if (isNetworkError) {
+        errorTitle = 'Problème de connexion';
+        errorMessage = 'Nous rencontrons des difficultés pour vous connecter. Veuillez vérifier votre connexion internet et réessayer.';
+      } else if (isAuthError) {
+        errorTitle = 'Erreur d\'authentification';
+        errorMessage = 'Problème lors de l\'authentification. Veuillez essayer de vous connecter à nouveau.';
+      }
       
       Alert.alert(
-        isNetworkError ? 'Problème de connexion' : (isAuthError ? 'Erreur d\'authentification' : 'Erreur'),
-        isNetworkError 
-          ? 'Nous rencontrons des difficultés pour vous connecter. Veuillez vérifier votre connexion internet et réessayer.'
-          : (isAuthError 
-              ? 'Problème lors de l\'authentification. L\'application va être redémarrée automatiquement.' 
-              : 'Une erreur inattendue est survenue. Veuillez réessayer dans quelques instants.'),
+        errorTitle,
+        errorMessage,
         [{ 
           text: 'OK',
           onPress: () => {
             if (isAuthError) {
-              // For auth errors, we should reload the app
-              console.log('Reloading app due to auth error');
-              setTimeout(() => {
-                // This will trigger the app to reload in development
-                // In production, user will need to manually restart
-                if (__DEV__) {
-                  throw new Error('Forced reload due to auth error');
+              // For auth errors in production, we should attempt to recover
+              try {
+                // Try to clear any cached auth state that might be causing issues
+                const { signOut } = require('firebase/auth');
+                const { auth } = require('../../services/firebase');
+                
+                if (auth && typeof auth.signOut === 'function') {
+                  console.log('Attempting to sign out to reset auth state');
+                  signOut(auth).catch(e => console.error('Error signing out:', e));
                 }
-              }, 1000);
+                
+                console.log('Clearing login form');
+                setEmail('');
+                setPassword('');
+                setConfirmPassword('');
+              } catch (recoveryError) {
+                console.error('Error during auth recovery:', recoveryError);
+              }
             }
           }
         }]

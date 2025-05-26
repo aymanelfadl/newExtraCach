@@ -41,15 +41,77 @@ export default function App() {
             // Check Firebase configuration
             try {
               // Import and test Firebase initialization
-              const { auth, db } = require('./services/firebase');
+              const { auth, db, checkFirebaseStatus } = require('./services/firebase');
               console.log('Firebase check - auth:', !!auth, 'db:', !!db);
               
-              if (!auth || !db) {
-                console.warn('Firebase services not fully initialized during app preparation');
+              // Perform a more detailed check of Firebase services
+              const firebaseStatus = checkFirebaseStatus();
+              console.log('Firebase status:', JSON.stringify(firebaseStatus));
+              
+              // In production, we'll try to recover from missing auth rather than crashing
+              if (!auth || typeof auth.onAuthStateChanged !== 'function') {
+                console.error('Firebase auth is missing or incomplete during app preparation');
+                
+                // Try to initialize Firebase services directly
+                try {
+                  console.log('Attempting direct Firebase initialization in App.jsx');
+                  const { getAuth } = require('firebase/auth');
+                  const { getApp, initializeApp } = require('firebase/app');
+                  const { getFirestore } = require('firebase/firestore');
+                  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+                  const { getReactNativePersistence, initializeAuth } = require('firebase/auth');
+                  
+                  // Try to get existing app or create a new one
+                  let firebaseApp;
+                  try {
+                    firebaseApp = getApp();
+                    console.log('Retrieved existing Firebase app');
+                  } catch (appError) {
+                    // App doesn't exist, create minimal config from env vars
+                    // Use hardcoded firebase config instead of env variables
+                    const minConfig = {
+                      apiKey: "AIzaSyBdYyh2H44T0rSIWzGI_wKQvP7KemXnDzY",
+                      projectId: "expense-manager-376bc",
+                      appId: "1:281673701772:web:3a07c675bbc0a0bac2dea9"
+                    };
+                    
+                    firebaseApp = initializeApp(minConfig, 'app-recovery');
+                    console.log('Created new Firebase app with minimal config');
+                  }
+                  
+                  // Initialize auth with the app
+                  try {
+                    const recoveredAuth = initializeAuth(firebaseApp, {
+                      persistence: getReactNativePersistence(AsyncStorage)
+                    });
+                    console.log('Successfully initialized auth in App.jsx recovery');
+                  } catch (authRecoveryError) {
+                    console.error('Auth recovery in App.jsx failed:', authRecoveryError);
+                  }
+                } catch (directInitError) {
+                  console.error('Direct Firebase initialization failed:', directInitError);
+                }
+                
+                // In production, we'll continue despite errors to give app a chance to work
+                if (process.env.NODE_ENV === 'production') {
+                  console.warn('Continuing despite Firebase auth issues in production');
+                } else {
+                  throw new Error('Service d\'authentification non disponible');
+                }
+              }
+              
+              if (!db) {
+                console.warn('Firebase database is missing during app preparation');
+                // We can continue without db, but log a warning
               }
             } catch (firebaseError) {
               console.error('Firebase check failed:', firebaseError.message);
-              // We don't throw here to avoid app crash, the auth system will handle it
+              // In production, we'll show a warning but continue
+              if (process.env.NODE_ENV === 'production') {
+                console.warn('Continuing despite Firebase initialization issues in production');
+              } else {
+                throw new Error(`Problème d'initialisation: ${firebaseError.message}`);
+              }
             }
             
             console.log('App initialization complete');

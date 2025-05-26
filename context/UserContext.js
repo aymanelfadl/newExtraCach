@@ -33,19 +33,59 @@ export const UserProvider = ({ children }) => {
     let authTimeout;
 
     try {
+      console.log('Setting up auth state listener...');
+      
+      // Verify auth exists before proceeding
+      if (!auth) {
+        console.error('Auth object is null or undefined in UserContext');
+        
+        // Production fallback - try to get auth directly in case it was initialized elsewhere
+        try {
+          const { getAuth } = require('firebase/auth');
+          const directAuth = getAuth();
+          if (directAuth) {
+            console.log('Successfully retrieved auth directly in UserContext');
+            // Replace the non-existent auth with the working one
+            auth = directAuth;
+          } else {
+            setAuthError('Service d\'authentification non disponible. Veuillez redémarrer l\'application.');
+            setLoading(false);
+            return () => {};
+          }
+        } catch (authFallbackError) {
+          console.error('Failed to get auth in UserContext fallback:', authFallbackError);
+          setAuthError('Service d\'authentification non disponible. Veuillez redémarrer l\'application.');
+          setLoading(false);
+          return () => {};
+        }
+      }
+      
       // Set a timeout for authentication to prevent hanging indefinitely
       authTimeout = setTimeout(() => {
         if (loading && isMounted) {
           console.log('Auth timeout reached, proceeding with null user');
           setLoading(false);
-          setAuthError('Authentication timed out. Please check your connection.');
+          setAuthError('Authentification expirée. Veuillez vérifier votre connexion.');
         }
       }, 15000); // 15 seconds timeout
 
+      // Verify the onAuthStateChanged method exists
+      if (typeof auth.onAuthStateChanged !== 'function') {
+        console.error('auth.onAuthStateChanged is not a function:', typeof auth.onAuthStateChanged);
+        setAuthError('Problème d\'authentification. Veuillez redémarrer l\'application.');
+        setLoading(false);
+        clearTimeout(authTimeout);
+        return () => {};
+      }
+
+      // Safe way to call onAuthStateChanged with error handling
+      console.log('Calling onAuthStateChanged...');
+      
       const unsubscribeAuth = onAuthStateChanged(auth, async (authUser) => {
         try {
           if (!isMounted) return;
           
+          console.log('Auth state changed, user:', authUser ? 'exists' : 'null');
           clearTimeout(authTimeout);
           
           if (authUser) {
@@ -64,6 +104,7 @@ export const UserProvider = ({ children }) => {
           } else if (!authUser && !isOnline) {
             const savedUser = await AsyncStorage.getItem(USER_DATA_KEY);
             if (savedUser) {
+              console.log('Using cached user data while offline');
               setUser(JSON.parse(savedUser));
               const viewingAsData = await AsyncStorage.getItem(VIEWING_AS_KEY);
               setViewingAs(viewingAsData ? JSON.parse(viewingAsData) : null);
@@ -78,7 +119,7 @@ export const UserProvider = ({ children }) => {
           }
         } catch (error) {
           console.error('🔥 Auth handler error:', error);
-          setAuthError(error.message);
+          setAuthError(`Erreur d'authentification: ${error.message}`);
         } finally {
           if (isMounted) {
             setLoading(false);
@@ -88,7 +129,7 @@ export const UserProvider = ({ children }) => {
         // This is the error callback for onAuthStateChanged
         console.error('Auth state change error:', error);
         if (isMounted) {
-          setAuthError(error.message);
+          setAuthError(`Erreur d'authentification: ${error.message}`);
           setLoading(false);
         }
       });

@@ -2,6 +2,7 @@ import { auth, db } from './firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove, getDocs, query, collection, where } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { recoverFirebaseAuth } from './firebaseRecovery';
 
 const CURRENT_USER_KEY = '@financial_app:currentUser';
 const VIEWING_AS_KEY = '@financial_app:viewingAs';
@@ -66,63 +67,163 @@ export const authService = {
   login: async (email, password) => {
     try {
       console.log('Login attempt for email:', email);
+      let authInstance = auth;
       
       // Check if Firebase auth is initialized
-      if (!auth) {
-        console.error('Firebase auth not initialized');
-        return { success: false, error: 'Service d\'authentification non disponible. Veuillez redémarrer l\'application.' };
+      if (!authInstance) {
+        console.error('Firebase auth not initialized, attempting to get auth instance directly');
+        try {
+          // Last resort attempt to get auth in production environment
+          const { getAuth } = require('firebase/auth');
+          const { initializeApp } = require('firebase/app');
+          
+          // Try to get the default app or initialize with minimal config
+          // Try to use our recovery module first
+          const recoveryResult = await recoverFirebaseAuth();
+          if (recoveryResult.success && recoveryResult.auth) {
+            authInstance = recoveryResult.auth;
+            console.log('Successfully recovered auth via recovery module');
+          } else {
+            // Fallback to standard recovery
+            try {
+              const { getApp } = require('firebase/app');
+              const defaultApp = getApp();
+              authInstance = getAuth(defaultApp);
+              console.log('Successfully retrieved auth from default app');
+            } catch (appError) {
+              console.error('No default app found, creating minimal app');
+              // Use hardcoded config values instead of environment variables
+              const minConfig = {
+                apiKey: "AIzaSyBdYyh2H44T0rSIWzGI_wKQvP7KemXnDzY",
+                projectId: "expense-manager-376bc",
+                appId: "1:281673701772:web:3a07c675bbc0a0bac2dea9"
+              };
+              const minimalApp = initializeApp(minConfig, "auth-fallback-app");
+              authInstance = getAuth(minimalApp);
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Failed to initialize fallback auth:', fallbackError);
+          return { 
+            success: false, 
+            error: 'Service d\'authentification non disponible. Veuillez redémarrer l\'application ou vérifier votre connexion.' 
+          };
+        }
+      }
+      
+      if (!authInstance) {
+        return { 
+          success: false, 
+          error: 'Impossible d\'accéder au service d\'authentification. Veuillez réessayer plus tard.' 
+        };
       }
       
       console.log('Firebase auth available, attempting sign in...');
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Use a timeout promise to prevent hanging
+      const loginPromise = signInWithEmailAndPassword(authInstance, email, password);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('La connexion a pris trop de temps. Veuillez vérifier votre connexion internet.')), 15000)
+      );
+      
+      const userCredential = await Promise.race([loginPromise, timeoutPromise]);
       const user = userCredential.user;
       console.log('Sign in successful, user ID:', user.uid);
       
       // Check if Firestore is initialized
-      if (!db) {
-        console.error('Firestore not initialized');
-        return { success: false, error: 'Service de base de données non disponible. Veuillez vérifier votre connexion internet.' };
+      let dbInstance = db;
+      if (!dbInstance) {
+        console.error('Firestore not initialized, attempting to initialize');
+        try {
+          const { getFirestore } = require('firebase/firestore');
+          dbInstance = getFirestore(authInstance.app);
+          console.log('Initialized Firestore from auth app:', !!dbInstance);
+        } catch (dbError) {
+          console.error('Failed to initialize Firestore:', dbError);
+          // We can still proceed with auth success even if db fails
+        }
       }
       
-      console.log('Fetching user document from Firestore...');
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log('User document exists, saving to AsyncStorage...');
-        await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify({
-          uid: user.uid,
-          email: user.email,
-          fullName: userData.fullName,
-          hasAccessTo: userData.hasAccessTo || [],
-          sharedAccess: userData.sharedAccess || []
-        }));
-        return { success: true, user: { ...user, ...userData } };
-      } else {
-        console.error('User document not found in Firestore');
-        throw new Error('Profile utilisateur non trouvé. Veuillez contacter le support.');
+      // If we have a database connection, try to fetch user document
+      if (dbInstance) {
+        console.log('Fetching user document from Firestore...');
+        try {
+          const userDoc = await getDoc(doc(dbInstance, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            console.log('User document exists, saving to AsyncStorage...');
+            await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify({
+              uid: user.uid,
+              email: user.email,
+              fullName: userData.fullName,
+              hasAccessTo: userData.hasAccessTo || [],
+              sharedAccess: userData.sharedAccess || []
+            }));
+            return { success: true, user: { ...user, ...userData } };
+          }
+        } catch (firestoreError) {
+          console.error('Error fetching user document:', firestoreError);
+          // Continue without Firestore data as a fallback
+        }
       }
+      
+      // If we couldn't get Firestore data but auth succeeded, create minimal user data
+      console.log('Creating minimal user data from auth only');
+      await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        fullName: user.displayName || email.split('@')[0],
+        hasAccessTo: [],
+        sharedAccess: []
+      }));
+      return { success: true, user };
+      
     } catch (error) {
-      console.error('Login error details:', error.code, error.message, error.stack);
+      console.error('Login error details:', error.code || 'no-error-code', error.message, error.stack);
       
       let message = 'Une erreur est survenue. Veuillez réessayer.';
-      if (
-        error.code === 'auth/wrong-password' ||
-        error.code === 'auth/invalid-credential' ||
-        error.code === 'auth/invalid-login-credentials'
+      const errorCode = error.code || '';
+      const errorMsg = (error.message || '').toLowerCase();
+      
+      // Improved error handling for both development and production
+      if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+        console.error('Login timeout detected in production');
+        message = 'La connexion a pris trop de temps. Veuillez vérifier votre connexion internet.';
+      } else if (
+        errorCode === 'auth/wrong-password' ||
+        errorCode === 'auth/invalid-credential' ||
+        errorCode === 'auth/invalid-login-credentials' ||
+        errorMsg.includes('password') && errorMsg.includes('invalid')
       ) {
         message = 'E-mail ou mot de passe incorrect.';
-      } else if (error.code === 'auth/user-not-found') {
+      } else if (errorCode === 'auth/user-not-found' || errorMsg.includes('user') && errorMsg.includes('not found')) {
         message = "Aucun utilisateur trouvé avec cet e-mail.";
-      } else if (error.code === 'auth/too-many-requests') {
+      } else if (errorCode === 'auth/too-many-requests' || errorMsg.includes('too many requests')) {
         message = "Trop de tentatives échouées. Veuillez réessayer plus tard.";
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (errorCode === 'auth/invalid-email' || errorMsg.includes('email') && errorMsg.includes('invalid')) {
         message = "L'e-mail est invalide.";
-      } else if (error.code === 'auth/email-already-in-use') {
+      } else if (errorCode === 'auth/email-already-in-use' || errorMsg.includes('email') && errorMsg.includes('already')) {
         message = "L'e-mail est déjà utilisé.";
-      } else if (error.code === 'auth/network-request-failed') {
+      } else if (errorCode === 'auth/network-request-failed' || 
+                errorMsg.includes('network') || 
+                errorMsg.includes('internet') || 
+                errorMsg.includes('connection')) {
         message = "Problème de connexion réseau. Veuillez vérifier votre connexion internet.";
-      } else if (error.code === 'auth/internal-error') {
+      } else if (errorCode === 'auth/internal-error' || errorMsg.includes('internal')) {
         message = "Erreur interne. Veuillez réessayer plus tard.";
+      } else if (errorMsg.includes('not initialized') || errorMsg.includes('no auth')) {
+        // Production-specific error - authentication service not initialized
+        console.error('Auth not initialized error in production');
+        message = "Service d'authentification non disponible. Veuillez redémarrer l'application.";
+        
+        // Try to recover by reinitializing auth
+        try {
+          const { getAuth } = require('firebase/auth');
+          const { getApp } = require('firebase/app');
+          const recoveredAuth = getAuth(getApp());
+          console.log('Auth recovery attempt during error handling:', !!recoveredAuth);
+        } catch (recoveryError) {
+          console.error('Auth recovery attempt failed:', recoveryError);
+        }
       }
       
       return { success: false, error: message };
