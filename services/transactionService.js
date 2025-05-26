@@ -493,7 +493,9 @@ export const transactionService = {
       ]));
       return { 
         success: true, 
-        syncedCount: syncedIds.length 
+        syncedCount: syncedIds.length,
+        syncedIds: syncedIds, // Return the IDs of synced transactions
+        syncedTransactions: userOfflineTransactions.filter(t => syncedIds.includes(t.id)) // Return the synced transactions
       };
     } catch (error) {
       return { success: false, error: error.message };

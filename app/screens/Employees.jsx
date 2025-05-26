@@ -71,7 +71,21 @@ export default function Employees() {
         try {
           const syncResult = await employeeService.syncOfflineEmployees();
           if (syncResult.success && syncResult.syncedCount > 0) {
+            // Remove synced offline items from the current state immediately
+            // to prevent showing duplicate items (offline version + server version)
+            const syncedIds = new Set(syncResult.syncedIds);
+            setEmployees(prevEmployees => 
+              prevEmployees.filter(employee => !syncedIds.has(employee.id))
+            );
+            
+            // Then reload employees to get updated data from server
             loadEmployees();
+            
+            // Show a success message
+            Alert.alert(
+              "Synchronisation terminée",
+              `${syncResult.syncedCount} employé(s) synchronisé(s) avec succès.`
+            );
           }
         } catch (error) {
           console.error('Error syncing offline data:', error);

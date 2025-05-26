@@ -1,44 +1,58 @@
 // theme.js - Central place for app styling
 
 export const colors = {
-  // Primary brand colors
-  primary: '#3498db',        // Main blue color
-  primaryLight: '#5dade2',   // Lighter blue
-  primaryDark: '#2980b9',    // Darker blue
+  // Primary brand colors - Deeper Blue Gradient
+  primary: '#0369A1',        // Ocean Blue - Sophisticated, trustworthy primary color
+  primaryLight: '#38BDF8',   // Sky Blue - Lighter version for backgrounds and highlights
+  primaryDark: '#0C4A6E',    // Deep Ocean Blue - Darker version for buttons and emphasis
   
-  // Secondary brand colors
-  secondary: '#2ecc71',      // Emerald green
-  secondaryLight: '#55d98d', // Lighter green
-  secondaryDark: '#27ae60',  // Darker green
+  // Secondary brand colors - Elegant Cool Gray
+  secondary: '#F2F5FA',      // Ultra Light Gray - Subtle secondary color
+  secondaryLight: '#FFFFFF', // White - Brightest version
+  secondaryDark: '#E5E9F0',  // Light Gray - Slightly darker for subtle differentiation
   
-  // Accent color
-  accent: '#9b59b6',         // Purple
-  accentLight: '#b07cc6',    // Lighter purple
-  accentDark: '#8e44ad',     // Darker purple
+  // Accent color - Money Green (Keeping this as you liked it)
+  accent: '#37B876',         // Money Green - Fresh accent color for financial actions
+  accentLight: '#83E2AD',    // Light Green - Lighter accent for highlights
+  accentDark: '#259A5D',     // Dark Green - Deeper accent for emphasis
   
-  // Financial indicators
-  income: '#27ae60',         // Green for income/positive
-  expense: '#e74c3c',        // Red for expense/negative
-  neutral: '#f39c12',        // Orange for neutral
-  warning: '#f39c12',        // Warning color (orange)
-  error: '#e74c3c',          // Error color (red)
+  // Financial indicators - Clear Semantic Colors
+  income: '#37B876',         // Money Green - Green for income/positive (kept as is)
+  expense: '#F43F5E',        // Rose Red - Modern, vibrant red for expenses
+  neutral: '#7D8597',        // Slate Gray - Neutral transactions or informational
+  warning: '#FFBB38',        // Amber - Warm yellow for warnings (not too alarming)
+  error: '#E11D48',          // Crimson - Bold but refined error indicator
   
   // UI colors
-  background: '#f5f7fa',     // Light background
-  card: '#ffffff',           // White for cards
-  textPrimary: '#2c3e50',    // Dark blue/gray for main text
-  textSecondary: '#7f8c8d',  // Medium gray for secondary text
-  textDisabled: '#bdc3c7',   // Light gray for disabled text
-  divider: '#ecf0f1',        // Very light gray for dividers
+  background: '#F8FAFC',     // Snow White - Clean, subtle light background
+  backgroundAlt: '#EDF2F7',  // Light Gray - Subtle alternative background
+  card: '#FFFFFF',           // Pure White - For cards and elevated elements
+  textPrimary: '#1A202C',    // Almost Black - Main text, very dark blue-gray
+  textSecondary: '#4A5568',  // Charcoal - Secondary text, dark gray
+  textDisabled: '#A0AEC0',   // Gray Blue - Disabled text
+  divider: '#E2E8F0',        // Pale Gray - Subtle divider
   
-  success: '#2ecc71',        // Green for success
-  warning: '#f1c40f',        // Yellow for warnings
-  error: '#e74c3c',          // Red for errors
-  info: '#3498db',           // Blue for information
+  success: '#37B876',        // Money Green - Success indicators
+  warning: '#FFBB38',        // Amber - Warning indicators
+  error: '#E11D48',          // Crimson - Bold but refined error indicator
+  info: '#0369A1',           // Ocean Blue - Information indicators
   
-  white: '#ffffff',         // White tab bar
-  tabBarActive: '#3498db',   // Blue for active tab
-  tabBarInactive: '#bdc3c7', // Gray for inactive tab
+  white: '#FFFFFF',          // Pure White
+  tabBarActive: '#0369A1',   // Ocean Blue - Active tab
+  tabBarInactive: '#A0AEC0', // Gray Blue - Inactive tab
+  
+  // Additional palette colors for flexible usage
+  darkBlue: '#0C4A6E',       // Deep Ocean Blue - Dark blue for emphasis
+  oceanBlue: '#0369A1',      // Ocean Blue - Primary blue
+  skyBlue: '#38BDF8',        // Sky Blue - Light blue for backgrounds
+  moneyGreen: '#37B876',     // Money Green - Success/income green (kept as is)
+  lightGreen: '#83E2AD',     // Light Green - Softer green
+  roseRed: '#F43F5E',        // Rose Red - Modern, vibrant red for expenses
+  crimson: '#E11D48',        // Crimson - Deeper red for emphasis
+  amber: '#FFBB38',          // Amber - Warning yellow (kept as is)
+  lightAmber: '#FFD580',     // Light Amber - Soft yellow
+  charcoal: '#4A5568',       // Charcoal - Dark gray text
+  platinum: '#E2E8F0'        // Platinum - Light gray backgrounds
 };
 
 export const typography = {

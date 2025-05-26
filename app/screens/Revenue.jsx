@@ -270,8 +270,25 @@ const Revenue = () => {
         try {
           const result = await transactionService.syncOfflineTransactions();
           if (result.success) {
-            // Reload revenues to get updated data from server
-            loadRevenues();
+            if (result.syncedCount > 0) {
+              // Remove synced offline items from the current state immediately
+              // to prevent showing duplicate items (offline version + server version)
+              const syncedIds = new Set(result.syncedIds);
+              setRevenues(prevRevenues => 
+                prevRevenues.filter(revenue => !syncedIds.has(revenue.id))
+              );
+              
+              // Then reload revenues to get updated data from server including the synced items
+              loadRevenues();
+              
+              // Show a success message
+              if (result.syncedCount > 0) {
+                Alert.alert(
+                  "Synchronisation terminée",
+                  `${result.syncedCount} revenu(s) synchronisé(s) avec succès.`
+                );
+              }
+            }
           }
         } catch (error) {
           console.error('Error syncing offline data:', error);

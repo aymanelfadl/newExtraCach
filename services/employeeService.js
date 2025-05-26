@@ -590,7 +590,9 @@ export const employeeService = {
       
       return {
         success: true,
-        syncedCount: syncedIds.length
+        syncedCount: syncedIds.length,
+        syncedIds: syncedIds, // Return the IDs that were synced
+        syncedItems: userOfflineData.filter(item => syncedIds.includes(item.id)) // Return the synced items
       };
     } catch (error) {
       console.error("Error syncing offline employees:", error);

@@ -75,7 +75,6 @@ const styles = StyleSheet.create({
     ...shadows.small,
   },
   titleContainer: {
-    paddingTop:spacing.medium,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
