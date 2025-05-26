@@ -502,6 +502,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginBottom: spacing.large,
     paddingHorizontal: spacing.medium,
+    paddingVertical: spacing.medium,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.large,
+    ...shadows.small,
   },
   recentTransactionsHeader: {
     flexDirection: 'row',

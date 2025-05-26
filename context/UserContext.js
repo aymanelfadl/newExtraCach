@@ -192,7 +192,7 @@ export const UserProvider = ({ children }) => {
         backgroundColor: '#FFFFFF'
       }}>
         <Image 
-          source={require('../assets/images/final_logo.webp')} 
+          source={require('../assets/images/final_logo.png')} 
           style={{ width: 100, height: 100, marginBottom: 20 }}
           resizeMode="contain"
         />
