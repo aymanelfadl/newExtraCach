@@ -66,7 +66,7 @@ export default function EmployeeDetail({ route, navigation }) {
   });
   const [showPaymentDatePicker, setShowPaymentDatePicker] = useState(false);
 
-  const { isOnline } = useUser();
+  const { isOnline, viewingAs, canModifyData } = useUser();
 
   // Fetch employee data
   const loadEmployeeData = async (showRefreshing = false) => {
@@ -103,6 +103,15 @@ export default function EmployeeDetail({ route, navigation }) {
   };
   
   const handleAddPayment = () => {
+    // Check if user is viewing someone else's data
+    if (viewingAs) {
+      Alert.alert(
+        "Action limitée",
+        "Vous ne pouvez pas ajouter de paiements lorsque vous consultez le compte d'un autre utilisateur."
+      );
+      return;
+    }
+    
     setNewPayment({
       description: '',
       amount: '',
@@ -272,6 +281,85 @@ export default function EmployeeDetail({ route, navigation }) {
   // Apply filters
   const filteredPayments = applyDateFilter(sortedPayments);
 
+  const handleDeletePayment = (paymentId, amount) => {
+    // Check if user is viewing someone else's data
+    if (viewingAs) {
+      Alert.alert(
+        "Action limitée",
+        "Vous ne pouvez pas supprimer de paiements lorsque vous consultez le compte d'un autre utilisateur."
+      );
+      return;
+    }
+    
+    // Check if offline
+    if (!isOnline) {
+      Alert.alert(
+        "Mode hors ligne",
+        "Voulez-vous supprimer ce paiement? La suppression sera synchronisée lorsque vous serez en ligne.",
+        [
+          {
+            text: "Annuler",
+            style: "cancel"
+          },
+          {
+            text: "Supprimer",
+            style: "destructive",
+            onPress: async () => deletePayment(paymentId)
+          }
+        ]
+      );
+      return;
+    }
+    
+    // If online
+    Alert.alert(
+      "Confirmation",
+      "Êtes-vous sûr de vouloir supprimer ce paiement?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel"
+        },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => deletePayment(paymentId)
+        }
+      ]
+    );
+  };
+  
+  const deletePayment = async (paymentId) => {
+    try {
+      const result = await employeeService.deletePayment(employeeId, paymentId);
+      
+      if (result.success) {
+        // Update the employee object in the state
+        if (employee) {
+          const updatedEmployee = {
+            ...employee,
+            payments: employee.payments.filter(p => p.id !== paymentId),
+            balance: result.updatedBalance || employee.balance - result.deletedPayment?.amount || 0,
+            lastPayment: result.lastPayment
+          };
+          
+          setEmployee(updatedEmployee);
+        }
+        
+        if (result.isOffline) {
+          Alert.alert('Mode hors ligne', 'La suppression sera synchronisée lorsque vous serez en ligne.');
+        } else {
+          Alert.alert('Succès', 'Paiement supprimé avec succès');
+        }
+      } else {
+        Alert.alert('Erreur', result.error || 'Impossible de supprimer le paiement');
+      }
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue lors de la suppression');
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -311,6 +399,16 @@ export default function EmployeeDetail({ route, navigation }) {
         <Text style={styles.headerTitle}>{employee.name}</Text>
         <View style={styles.headerRight} />
       </View>
+      
+      {/* View-only mode indicator */}
+      {viewingAs && (
+        <View style={styles.viewingAsBanner}>
+          <Icon name="account-eye" size={16} color={colors.white} />
+          <Text style={styles.viewingAsText}>
+            Consultation du compte de {viewingAs.fullName} - Mode lecture seule
+          </Text>
+        </View>
+      )}
       
       <ScrollView
         style={styles.scrollView}
@@ -352,7 +450,18 @@ export default function EmployeeDetail({ route, navigation }) {
                   <Text style={styles.paymentDescription}>{payment.description}</Text>
                   <Text style={styles.paymentDate}>{payment.date}</Text>
                 </View>
-                <Text style={styles.paymentAmount}>{payment.amount} MAD</Text>
+                <View style={styles.paymentActions}>
+                  <Text style={styles.paymentAmount}>{payment.amount} MAD</Text>
+                  {/* Hide delete button when viewing someone else's data */}
+                  {!viewingAs && (
+                    <TouchableOpacity
+                      style={styles.deletePaymentButton}
+                      onPress={() => handleDeletePayment(payment.id, payment.amount)}
+                    >
+                      <Icon name="delete-outline" size={18} color={colors.expense} />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             ))
           ) : (
@@ -367,13 +476,15 @@ export default function EmployeeDetail({ route, navigation }) {
         </View>
       </ScrollView>
       
-      {/* Circular Add Payment Button (Fixed position) */}
-      <TouchableOpacity 
-        style={styles.addPaymentButtonCircle}
-        onPress={handleAddPayment}
-      >
-        <Icon name="cash-plus" size={24} color={colors.white} />
-      </TouchableOpacity>
+      {/* Circular Add Payment Button (Fixed position) - Only visible when not viewing someone else's data */}
+      {!viewingAs && (
+        <TouchableOpacity 
+          style={styles.addPaymentButtonCircle}
+          onPress={handleAddPayment}
+        >
+          <Icon name="cash-plus" size={24} color={colors.white} />
+        </TouchableOpacity>
+      )}
       
       {/* Circular Filter Button (Fixed position) */}
       <TouchableOpacity 
@@ -586,6 +697,18 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 40,
   },
+  viewingAsBanner: {
+    backgroundColor: colors.primary,
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewingAsText: {
+    color: colors.white,
+    marginLeft: 8,
+    fontWeight: '200',
+  },
   scrollView: {
     flex: 1,
   },
@@ -674,6 +797,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: colors.income,
+  },
+  paymentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  deletePaymentButton: {
+    padding: 8,
+    marginLeft: 12,
+    borderRadius: 4,
+    backgroundColor: `${colors.errorLight}30`,
   },
   emptyState: {
     padding: 24,

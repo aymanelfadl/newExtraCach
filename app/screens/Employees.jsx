@@ -19,7 +19,7 @@ export default function Employees() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
-  const { isOnline } = useUser();
+  const { isOnline, viewingAs, canModifyData } = useUser();
 
   const loadEmployees = async (showRefreshing = false) => {
     try {
@@ -111,6 +111,15 @@ export default function Employees() {
     : employees;
 
   const handleAddEmployee = () => {
+    // Check if user is viewing someone else's data
+    if (viewingAs) {
+      Alert.alert(
+        "Action limitée",
+        "Vous ne pouvez pas ajouter d'employés lorsque vous consultez le compte d'un autre utilisateur."
+      );
+      return;
+    }
+    
     setNewEmployee({ name: '', salary: '' });
     setModalVisible(true);
   };
@@ -155,6 +164,15 @@ export default function Employees() {
   };
   
   const handleDeleteEmployee = (employeeId) => {
+    // Check if user is viewing someone else's data
+    if (viewingAs) {
+      Alert.alert(
+        "Action limitée",
+        "Vous ne pouvez pas supprimer d'employés lorsque vous consultez le compte d'un autre utilisateur."
+      );
+      return;
+    }
+    
     Alert.alert(
       "Confirmation",
       "Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.",
@@ -211,6 +229,16 @@ export default function Employees() {
         </View>
       )}
       
+      {/* View-only mode indicator */}
+      {viewingAs && (
+        <View style={styles.viewingAsBanner}>
+          <Icon name="account-eye" size={16} color={colors.white} />
+          <Text style={styles.viewingAsText}>
+            Consultation du compte de {viewingAs.fullName} - Mode lecture seule
+          </Text>
+        </View>
+      )}
+      
       <View style={styles.summaryContainer}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>Solde</Text>
@@ -236,9 +264,12 @@ export default function Employees() {
       </View>      
       <View style={styles.header}>
         <Text style={styles.title}>Liste des employés</Text>
-        <TouchableOpacity onPress={handleAddEmployee} style={styles.addButton}>
-          <Icon name="account-plus" size={24} color={colors.white} />
-        </TouchableOpacity>
+        {/* Hide add button when viewing someone else's data */}
+        {!viewingAs && (
+          <TouchableOpacity onPress={handleAddEmployee} style={styles.addButton}>
+            <Icon name="account-plus" size={24} color={colors.white} />
+          </TouchableOpacity>
+        )}
       </View>
       
       <FlatList
@@ -281,12 +312,15 @@ export default function Employees() {
                 {(item.payments?.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0) || 0)} MAD
               </Text>
               <View style={styles.actionsRow}>
-                <TouchableOpacity 
-                  onPress={() => handleDeleteEmployee(item.id)}
-                  style={styles.deleteButton}
-                >
-                  <Icon name="delete" size={16} color={colors.expense} />
-                </TouchableOpacity>
+                {/* Hide delete button when viewing someone else's data */}
+                {!viewingAs && (
+                  <TouchableOpacity 
+                    onPress={() => handleDeleteEmployee(item.id)}
+                    style={styles.deleteButton}
+                  >
+                    <Icon name="delete" size={16} color={colors.expense} />
+                  </TouchableOpacity>
+                )}
               </View>
               <Icon name="chevron-right" size={24} color={colors.iconInactive || '#aaa'} />
             </View>
@@ -381,6 +415,19 @@ const styles = StyleSheet.create({
     color: colors.white,
     marginLeft: spacing.small,
     fontWeight: typography.weightMedium,
+  },
+  viewingAsBanner: {
+    backgroundColor: colors.primary,
+    padding: spacing.small,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.small,
+  },
+  viewingAsText: {
+    color: colors.white,
+    marginLeft: spacing.small,
+    fontWeight: 200,
   },
   summaryContainer: {
     flexDirection: 'row',

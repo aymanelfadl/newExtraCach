@@ -59,6 +59,10 @@ export const transactionService = {
       const isOnline = networkState.isConnected && networkState.isInternetReachable;
       let onlineTransactions = [];
       let offlineTransactions = [];
+      
+      // Map of online transaction IDs to use for filtering out duplicates
+      const onlineTransactionIds = new Set();
+      
       if (isOnline) {
         let q = query(
           collection(db, 'transactions'),
@@ -66,18 +70,37 @@ export const transactionService = {
           orderBy('createdAt', 'desc')
         );
         const querySnapshot = await getDocs(q);
-        onlineTransactions = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        onlineTransactions = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          onlineTransactionIds.add(doc.id);
+          return {
+            id: doc.id,
+            ...data
+          };
+        });
       }
+      
+      // Load offline transactions
       const offlineTransactionsJson = await AsyncStorage.getItem(OFFLINE_TRANSACTIONS_KEY);
       if (offlineTransactionsJson) {
         const allOfflineData = JSON.parse(offlineTransactionsJson);
-        offlineTransactions = allOfflineData.filter(transaction =>
-          transaction.userId === userId &&
-          transaction.pendingAction !== 'delete'
-        );
+        
+        // Filter offline transactions:
+        // 1. Must belong to current user
+        // 2. Not be a delete operation
+        // 3. For updates, make sure the original ID doesn't match any online transaction ID
+        offlineTransactions = allOfflineData.filter(transaction => {
+          if (transaction.userId !== userId) return false;
+          if (transaction.pendingAction === 'delete') return false;
+          
+          // If this is an update, and we already have the online version, skip it to avoid duplicates
+          if (transaction.pendingAction === 'update' && 
+              onlineTransactionIds.has(transaction.originalId)) {
+            return false;
+          }
+          
+          return true;
+        });
       }
       
       // Combine and sort transactions
@@ -102,8 +125,14 @@ export const transactionService = {
             const parts = transaction.date.split('/');
             if (parts.length === 3) {
               transactionDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            } else {
+              // Try as ISO string
+              transactionDate = new Date(transaction.date);
             }
-          } else if (transaction.createdAt) {
+          }
+          
+          // Fallback to createdAt
+          if (!transactionDate || isNaN(transactionDate.getTime())) {
             transactionDate = new Date(transaction.createdAt);
           }
           
@@ -116,6 +145,7 @@ export const transactionService = {
       
       return { success: true, transactions: combinedTransactions, isPartiallyOffline: !isOnline };
     } catch (error) {
+      console.error("Error getting transactions:", error);
       return { success: false, error: error.message };
     }
   },
@@ -453,37 +483,70 @@ export const transactionService = {
       if (userOfflineTransactions.length === 0) {
         return { success: true, message: "Aucune transaction hors ligne à synchroniser" };
       }
+      
+      // Map to keep track of newDocRefs for offline transactions
+      const newDocRefs = {};
+      
       const batch = writeBatch(db);
       const syncedIds = [];
+      
+      // Process all ADD operations first to gather new document IDs
       for (const transaction of userOfflineTransactions) {
         if (transaction.pendingAction === 'add' && transaction.id.startsWith('offline_')) {
           const { id, isOffline, pendingAction, ...transactionData } = transaction;
           const newDocRef = doc(collection(db, 'transactions'));
+          
+          // Store reference for offline ID to Firestore ID mapping
+          newDocRefs[transaction.id] = newDocRef.id;
+          
           batch.set(newDocRef, {
             ...transactionData,
             syncedFromOffline: true,
             syncedAt: serverTimestamp()
           });
           syncedIds.push(transaction.id);
-        } 
-        else if (transaction.pendingAction === 'update') {
-          const docRef = doc(db, 'transactions', transaction.originalId);
-          batch.update(docRef, {
-            ...transaction.data,
-            updatedAt: transaction.updatedAt,
-            lastUpdatedBy: currentUser.uid,
-            syncedFromOffline: true,
-            syncedAt: serverTimestamp()
-          });
-          syncedIds.push(transaction.id);
-        }
-        else if (transaction.pendingAction === 'delete') {
-          const docRef = doc(db, 'transactions', transaction.originalId);
-          batch.delete(docRef);
-          syncedIds.push(transaction.id);
         }
       }
-      await batch.commit();
+      
+      // Then process updates and deletes
+      for (const transaction of userOfflineTransactions) {
+        if (transaction.pendingAction === 'update') {
+          // Check if the update is for an offline transaction that was just added
+          const targetId = transaction.originalId.startsWith('offline_') 
+            ? newDocRefs[transaction.originalId] // Use the new Firestore ID if available
+            : transaction.originalId;
+          
+          if (targetId) {
+            const docRef = doc(db, 'transactions', targetId);
+            batch.update(docRef, {
+              ...transaction.data,
+              updatedAt: transaction.updatedAt,
+              lastUpdatedBy: currentUser.uid,
+              syncedFromOffline: true,
+              syncedAt: serverTimestamp()
+            });
+            syncedIds.push(transaction.id);
+          }
+        }
+        else if (transaction.pendingAction === 'delete') {
+          // Check if the deletion is for an offline transaction that was just added
+          const targetId = transaction.originalId.startsWith('offline_')
+            ? newDocRefs[transaction.originalId] // Use the new Firestore ID if available
+            : transaction.originalId;
+            
+          if (targetId) {
+            const docRef = doc(db, 'transactions', targetId);
+            batch.delete(docRef);
+            syncedIds.push(transaction.id);
+          }
+        }
+      }
+      
+      // Only commit if we have operations in the batch
+      if (syncedIds.length > 0) {
+        await batch.commit();
+      }
+      
       const remainingTransactions = offlineTransactions.filter(
         transaction => !syncedIds.includes(transaction.id)
       );
@@ -491,6 +554,7 @@ export const transactionService = {
         ...otherUsersTransactions,
         ...remainingTransactions
       ]));
+      
       return { 
         success: true, 
         syncedCount: syncedIds.length,
@@ -498,6 +562,7 @@ export const transactionService = {
         syncedTransactions: userOfflineTransactions.filter(t => syncedIds.includes(t.id)) // Return the synced transactions
       };
     } catch (error) {
+      console.error("Error syncing offline transactions:", error);
       return { success: false, error: error.message };
     }
   }

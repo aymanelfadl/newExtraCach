@@ -10,7 +10,7 @@ import { useUser } from '../../context/UserContext';
 import { transactionService } from '../../services/transactionService';
 
 const Revenue = () => {
-  const { isOnline: userContextOnline } = useUser();
+  const { isOnline: userContextOnline, viewingAs, canModifyData } = useUser();
   const isOnline = userContextOnline;
   
   const [modalVisible, setModalVisible] = useState(false);
@@ -95,6 +95,15 @@ const Revenue = () => {
   
   // Handle delete revenue
   const handleDeletePress = (id) => {
+    // Check if user is viewing someone else's data
+    if (viewingAs) {
+      Alert.alert(
+        "Action limitée",
+        "Vous ne pouvez pas supprimer de revenus lorsque vous consultez le compte d'un autre utilisateur."
+      );
+      return;
+    }
+    
     Alert.alert(
       "Confirmation",
       "Êtes-vous sûr de vouloir supprimer ce revenu?",
@@ -140,6 +149,15 @@ const Revenue = () => {
   
   // Handle edit revenue
   const handleEditPress = (item) => {
+    // Check if user is viewing someone else's data
+    if (viewingAs) {
+      Alert.alert(
+        "Action limitée",
+        "Vous ne pouvez pas modifier de revenus lorsque vous consultez le compte d'un autre utilisateur."
+      );
+      return;
+    }
+    
     // Convert from service model to component model if needed
     const editableItem = {
       id: item.id,
@@ -268,27 +286,31 @@ const Revenue = () => {
       // When the app comes back online, try to sync offline data
       const syncData = async () => {
         try {
+          // First, remove offline items from the local state to avoid duplication during sync
+          const offlineIds = revenues
+            .filter(revenue => revenue.id && revenue.id.startsWith('offline_'))
+            .map(revenue => revenue.id);
+            
+          if (offlineIds.length > 0) {
+            const offlineIdSet = new Set(offlineIds);
+            // Remove offline items as they'll be replaced with synced versions
+            setRevenues(prevRevenues => 
+              prevRevenues.filter(revenue => !offlineIdSet.has(revenue.id))
+            );
+          }
+          
+          // Then sync the offline data
           const result = await transactionService.syncOfflineTransactions();
-          if (result.success) {
-            if (result.syncedCount > 0) {
-              // Remove synced offline items from the current state immediately
-              // to prevent showing duplicate items (offline version + server version)
-              const syncedIds = new Set(result.syncedIds);
-              setRevenues(prevRevenues => 
-                prevRevenues.filter(revenue => !syncedIds.has(revenue.id))
-              );
-              
-              // Then reload revenues to get updated data from server including the synced items
-              loadRevenues();
-              
-              // Show a success message
-              if (result.syncedCount > 0) {
-                Alert.alert(
-                  "Synchronisation terminée",
-                  `${result.syncedCount} revenu(s) synchronisé(s) avec succès.`
-                );
-              }
-            }
+          
+          if (result.success && result.syncedCount > 0) {
+            // Reload revenues to get updated data from server including the synced items
+            await loadRevenues();
+            
+            // Show a success message
+            Alert.alert(
+              "Synchronisation terminée",
+              `${result.syncedCount} revenu(s) synchronisé(s) avec succès.`
+            );
           }
         } catch (error) {
           console.error('Error syncing offline data:', error);
@@ -311,6 +333,16 @@ const Revenue = () => {
         </View>
       )}
       
+      {/* View-only mode indicator */}
+      {viewingAs && (
+        <View style={styles.viewingAsBanner}>
+          <Icon name="account-eye" size={16} color={colors.white} />
+          <Text style={styles.viewingAsText}>
+            Consultation du compte de {viewingAs.fullName} - Mode lecture seule
+          </Text>
+        </View>
+      )}
+      
       {/* Error message */}
       {error && !isLoading && (
         <View style={styles.errorContainer}>
@@ -322,8 +354,8 @@ const Revenue = () => {
       {/* Revenue list */}
       <CardList 
         data={filteredItems()}
-        onDeletePress={handleDeletePress}
-        onEditPress={handleEditPress}
+        onDeletePress={viewingAs ? null : handleDeletePress}
+        onEditPress={viewingAs ? null : handleEditPress}
         emptyMessage="Aucun revenu trouvé"
         isLoading={isLoading}
         numColumns={1}
@@ -338,10 +370,12 @@ const Revenue = () => {
         }
       />
       
-      {/* Add revenue button */}
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-        <Icon name="plus" size={30} color={colors.card} />
-      </TouchableOpacity>
+      {/* Add revenue button - only visible when not viewing another user's data */}
+      {!viewingAs && (
+        <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+          <Icon name="plus" size={30} color={colors.card} />
+        </TouchableOpacity>
+      )}
       
       {/* Add/Edit revenue modal */}
       <AddRevenue 
@@ -395,6 +429,18 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginLeft: spacing.small,
     flex: 1,
+  },
+  viewingAsBanner: {
+    backgroundColor: colors.primary,
+    padding: spacing.small,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewingAsText: {
+    color: colors.white,
+    marginLeft: spacing.small,
+    fontWeight: 200,
   }
 });
 

@@ -31,6 +31,7 @@ export const colors = {
   textSecondary: '#4A5568',  // Charcoal - Secondary text, dark gray
   textDisabled: '#A0AEC0',   // Gray Blue - Disabled text
   divider: '#E2E8F0',        // Pale Gray - Subtle divider
+  errorLight: '#FEE2E2',     // Light Red - Subtle background for error indicators
   
   success: '#37B876',        // Money Green - Success indicators
   warning: '#FFBB38',        // Amber - Warning indicators

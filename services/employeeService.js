@@ -9,7 +9,17 @@ const OFFLINE_EMPLOYEES_KEY = '@financial_app:offlineEmployees';
 // Add missing index URL for user messaging
 const MISSING_INDEX_URL = 'https://console.firebase.google.com/v1/r/project/expense-manager-376bc/firestore/indexes?create_composite=Cldwcm9qZWN0cy9leHBlbnNlLW1hbmFnZXItMzc2YmMvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2VtcGxveWVlcy9pbmRleGVzL18QARoKCgZ1c2VySWQQARoNCgljcmVhdGVkQXQQAhoMCghfX25hbWVfXxAC';
 
+const VIEWING_AS_KEY = '@financial_app:viewingAs';
+
 const getCurrentUserId = async () => {
+  // First check if we're viewing another user's data
+  const viewingAs = await AsyncStorage.getItem(VIEWING_AS_KEY);
+  if (viewingAs) {
+    const viewingAsUser = JSON.parse(viewingAs);
+    return viewingAsUser.uid;
+  }
+  
+  // Otherwise return the current authenticated user's ID
   const user = await authService.getCurrentUser();
   if (!user || !user.uid) return null;
   return user.uid;
@@ -496,6 +506,154 @@ export const employeeService = {
   },
 
   /**
+   * Delete a payment from an employee's record
+   */
+  deletePayment: async (employeeId, paymentId) => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        return { success: false, error: "Utilisateur non connecté" };
+      }
+      
+      const networkState = await NetInfo.fetch();
+      const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      
+      if (isOnline) {
+        // Get the current employee
+        const employeeRef = doc(db, 'employees', employeeId);
+        const employeeSnap = await getDoc(employeeRef);
+        
+        if (!employeeSnap.exists()) {
+          return { success: false, error: "Employé non trouvé" };
+        }
+        
+        const employeeData = employeeSnap.data();
+        const payments = employeeData.payments || [];
+        
+        // Find the payment to delete
+        const paymentToDelete = payments.find(payment => payment.id === paymentId);
+        if (!paymentToDelete) {
+          return { success: false, error: "Paiement non trouvé" };
+        }
+        
+        // Calculate new balance
+        const currentBalance = employeeData.balance || 0;
+        const newBalance = currentBalance - paymentToDelete.amount;
+        
+        // Filter out the payment to delete
+        const updatedPayments = payments.filter(payment => payment.id !== paymentId);
+        
+        // Find the new last payment date
+        let lastPayment = null;
+        if (updatedPayments.length > 0) {
+          const latestPayment = [...updatedPayments].sort((a, b) => 
+            new Date(b.createdAt) - new Date(a.createdAt)
+          )[0];
+          lastPayment = latestPayment.date;
+        }
+        
+        // Update the employee document
+        await updateDoc(employeeRef, {
+          payments: updatedPayments,
+          balance: newBalance,
+          lastPayment: lastPayment,
+          updatedAt: new Date().toISOString()
+        });
+        
+        return { 
+          success: true,
+          deletedPayment: paymentToDelete,
+          updatedBalance: newBalance,
+          lastPayment
+        };
+      } else {
+        // Handle offline payment deletion
+        const offlineEmployeesJson = await AsyncStorage.getItem(OFFLINE_EMPLOYEES_KEY);
+        let offlineEmployees = offlineEmployeesJson ? JSON.parse(offlineEmployeesJson) : [];
+        
+        // Check if we're working with an offline employee
+        const isOfflineEmployee = employeeId.startsWith('offline_emp_');
+        
+        if (isOfflineEmployee) {
+          // Find and update the offline employee
+          const updatedOfflineEmployees = offlineEmployees.map(emp => {
+            if (emp.id === employeeId) {
+              const payments = emp.payments || [];
+              
+              // Find the payment to delete
+              const paymentToDelete = payments.find(payment => payment.id === paymentId);
+              if (!paymentToDelete) {
+                return emp; // Payment not found, return employee unchanged
+              }
+              
+              // Calculate new balance
+              const currentBalance = emp.balance || 0;
+              const newBalance = currentBalance - paymentToDelete.amount;
+              
+              // Filter out the payment to delete
+              const updatedPayments = payments.filter(payment => payment.id !== paymentId);
+              
+              // Find the new last payment date
+              let lastPayment = null;
+              if (updatedPayments.length > 0) {
+                const latestPayment = [...updatedPayments].sort((a, b) => 
+                  new Date(b.createdAt) - new Date(a.createdAt)
+                )[0];
+                lastPayment = latestPayment.date;
+              }
+              
+              return {
+                ...emp,
+                payments: updatedPayments,
+                balance: newBalance,
+                lastPayment,
+                updatedAt: new Date().toISOString()
+              };
+            }
+            return emp;
+          });
+          
+          await AsyncStorage.setItem(OFFLINE_EMPLOYEES_KEY, JSON.stringify(updatedOfflineEmployees));
+          
+          // Find the updated employee to return the new balance
+          const updatedEmployee = updatedOfflineEmployees.find(emp => emp.id === employeeId);
+          const paymentToDelete = (updatedEmployee.payments || []).find(p => p.id === paymentId);
+          
+          return { 
+            success: true,
+            deletedPayment: paymentToDelete,
+            updatedBalance: updatedEmployee.balance,
+            lastPayment: updatedEmployee.lastPayment,
+            isOffline: true 
+          };
+        } else {
+          // Create an offline payment delete operation
+          const offlinePaymentOp = {
+            id: `offline_emp_delete_payment_${Date.now()}`,
+            originalEmployeeId: employeeId,
+            paymentId,
+            userId,
+            pendingAction: 'delete_payment',
+            isOffline: true,
+            timestamp: new Date().toISOString()
+          };
+          
+          offlineEmployees.push(offlinePaymentOp);
+          await AsyncStorage.setItem(OFFLINE_EMPLOYEES_KEY, JSON.stringify(offlineEmployees));
+          
+          return { 
+            success: true,
+            isOffline: true 
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
    * Sync offline employee operations when coming back online
    */
   syncOfflineEmployees: async () => {
@@ -574,6 +732,47 @@ export const employeeService = {
                 updatedAt: new Date().toISOString(),
                 syncedFromOffline: true
               });
+            }
+            
+            syncedIds.push(item.id);
+          }
+          else if (item.pendingAction === 'delete_payment') {
+            // Delete a payment from an employee
+            const employeeRef = doc(db, 'employees', item.originalEmployeeId);
+            const employeeSnap = await getDoc(employeeRef);
+            
+            if (employeeSnap.exists()) {
+              const employeeData = employeeSnap.data();
+              const payments = employeeData.payments || [];
+              
+              // Find the payment to delete
+              const paymentToDelete = payments.find(payment => payment.id === item.paymentId);
+              
+              if (paymentToDelete) {
+                // Calculate new balance
+                const currentBalance = employeeData.balance || 0;
+                const newBalance = currentBalance - paymentToDelete.amount;
+                
+                // Filter out the payment to delete
+                const updatedPayments = payments.filter(payment => payment.id !== item.paymentId);
+                
+                // Find the new last payment date
+                let lastPayment = null;
+                if (updatedPayments.length > 0) {
+                  const latestPayment = [...updatedPayments].sort((a, b) => 
+                    new Date(b.createdAt) - new Date(a.createdAt)
+                  )[0];
+                  lastPayment = latestPayment.date;
+                }
+                
+                await updateDoc(employeeRef, {
+                  payments: updatedPayments,
+                  balance: newBalance,
+                  lastPayment: lastPayment,
+                  updatedAt: new Date().toISOString(),
+                  syncedFromOffline: true
+                });
+              }
             }
             
             syncedIds.push(item.id);

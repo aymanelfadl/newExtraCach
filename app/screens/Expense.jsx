@@ -9,8 +9,10 @@ import CardList from '../../components/CardList';
 import { useUser } from '../../context/UserContext';
 import { transactionService } from '../../services/transactionService';
 
+
+
 const Expense = () => {
-  const { isOnline: userContextOnline } = useUser();
+  const { isOnline: userContextOnline, viewingAs, canModifyData } = useUser();
   const isOnline = userContextOnline;
   
   const [modalVisible, setModalVisible] = useState(false);
@@ -95,6 +97,15 @@ const Expense = () => {
   
   // Handle delete expense
   const handleDeletePress = (id) => {
+    // Check if user is viewing someone else's data
+    if (viewingAs) {
+      Alert.alert(
+        "Action limitée",
+        "Vous ne pouvez pas supprimer de dépenses lorsque vous consultez le compte d'un autre utilisateur."
+      );
+      return;
+    }
+
     Alert.alert(
       "Confirmation",
       "Êtes-vous sûr de vouloir supprimer cette dépense?",
@@ -140,6 +151,15 @@ const Expense = () => {
   
   // Handle edit expense
   const handleEditPress = (item) => {
+    // Check if user is viewing someone else's data
+    if (viewingAs) {
+      Alert.alert(
+        "Action limitée",
+        "Vous ne pouvez pas modifier de dépenses lorsque vous consultez le compte d'un autre utilisateur."
+      );
+      return;
+    }
+    
     // Convert from service model to component model if needed
     const editableItem = {
       id: item.id,
@@ -267,27 +287,31 @@ const Expense = () => {
       // When the app comes back online, try to sync offline data
       const syncData = async () => {
         try {
+          // First, remove offline items from the local state to avoid duplication during sync
+          const offlineIds = expenses
+            .filter(expense => expense.id && expense.id.startsWith('offline_'))
+            .map(expense => expense.id);
+            
+          if (offlineIds.length > 0) {
+            const offlineIdSet = new Set(offlineIds);
+            // Remove offline items as they'll be replaced with synced versions
+            setExpenses(prevExpenses => 
+              prevExpenses.filter(expense => !offlineIdSet.has(expense.id))
+            );
+          }
+          
+          // Then sync the offline data
           const result = await transactionService.syncOfflineTransactions();
-          if (result.success) {
-            if (result.syncedCount > 0) {
-              // Remove synced offline items from the current state immediately
-              // to prevent showing duplicate items (offline version + server version)
-              const syncedIds = new Set(result.syncedIds);
-              setExpenses(prevExpenses => 
-                prevExpenses.filter(expense => !syncedIds.has(expense.id))
-              );
-              
-              // Then reload expenses to get updated data from server including the synced items
-              loadExpenses();
-              
-              // Show a success message
-              if (result.syncedCount > 0) {
-                Alert.alert(
-                  "Synchronisation terminée",
-                  `${result.syncedCount} dépense(s) synchronisée(s) avec succès.`
-                );
-              }
-            }
+          
+          if (result.success && result.syncedCount > 0) {
+            // Reload expenses to get updated data from server including the synced items
+            await loadExpenses();
+            
+            // Show a success message
+            Alert.alert(
+              "Synchronisation terminée",
+              `${result.syncedCount} dépense(s) synchronisée(s) avec succès.`
+            );
           }
         } catch (error) {
           console.error('Error syncing offline data:', error);
@@ -310,6 +334,16 @@ const Expense = () => {
         </View>
       )}
       
+      {/* View-only mode indicator */}
+      {viewingAs && (
+        <View style={styles.viewingAsBanner}>
+          <Icon name="account-eye" size={16} color={colors.white} />
+          <Text style={styles.viewingAsText}>
+            Consultation du compte de {viewingAs.fullName} - Mode lecture seule
+          </Text>
+        </View>
+      )}
+      
       {/* Error message */}
       {error && !isLoading && (
         <View style={styles.errorContainer}>
@@ -321,8 +355,8 @@ const Expense = () => {
       {/* Expense list */}
       <CardList 
         data={filteredItems()}
-        onDeletePress={handleDeletePress}
-        onEditPress={handleEditPress}
+        onDeletePress={viewingAs ? null : handleDeletePress}
+        onEditPress={viewingAs ? null : handleEditPress}
         emptyMessage="Aucune dépense trouvée"
         isLoading={isLoading}
         isExpenseScreen={true}
@@ -336,10 +370,12 @@ const Expense = () => {
         }
       />
       
-      {/* Add expense button */}
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-        <Icon name="plus" size={30} color={colors.card} />
-      </TouchableOpacity>
+      {/* Add expense button - only visible when not viewing another user's data */}
+      {!viewingAs && (
+        <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+          <Icon name="plus" size={30} color={colors.card} />
+        </TouchableOpacity>
+      )}
       
       {/* Add/Edit expense modal */}
       <AddExpense 
@@ -393,6 +429,18 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginLeft: spacing.small,
     flex: 1,
+  },
+  viewingAsBanner: {
+    backgroundColor: colors.primary,
+    padding: spacing.small,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewingAsText: {
+    color: colors.white,
+    marginLeft: spacing.small,
+    fontWeight: 200,
   }
 });
 
