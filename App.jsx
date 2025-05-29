@@ -1,7 +1,7 @@
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Image, StatusBar } from 'react-native';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 
 import AppNavigator from './app/screens/AppNavigator';
@@ -140,6 +140,11 @@ export default function App() {
   if (!appIsReady) {
     return (
       <View style={styles.container}>
+        <StatusBar 
+          backgroundColor="#FFFFFF" 
+          barStyle="dark-content" 
+          translucent={false}
+        />
         <ActivityIndicator size="large" color="#0000ff" />
       </View>
     );
@@ -148,6 +153,11 @@ export default function App() {
   if (initError) {
     return (
       <View style={styles.errorContainer}>
+        <StatusBar 
+          backgroundColor="#FFFFFF" 
+          barStyle="dark-content" 
+          translucent={false}
+        />
         <Text style={styles.errorText}>Un problème est survenu</Text>
         <Text style={styles.errorDetail}>{initError}</Text>
         <Text style={styles.errorHelp}>Veuillez redémarrer l'application</Text>
@@ -185,6 +195,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <StatusBar 
+        backgroundColor="#FFFFFF" 
+        barStyle="dark-content"
+        translucent={false}
+      />
       <UserProvider>
         <NavigationContainer>
           <AppNavigator />
