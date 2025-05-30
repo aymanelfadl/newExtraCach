@@ -21,6 +21,7 @@ import Header from '../../components/Header';
 import * as XLSX from 'xlsx';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const Settings = () => {
   const { setViewingAsUser, viewingAs } = useUser();
@@ -32,12 +33,24 @@ const Settings = () => {
   const [archiveModalVisible, setArchiveModalVisible] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState([]);
   const [availableMonths, setAvailableMonths] = useState([]);
-  const [archiveMonths, setArchiveMonths] = useState([]);
+  const [showArchiveDatePicker, setShowArchiveDatePicker] = useState(false);
+  const [archiveDate, setArchiveDate] = useState(new Date());
+  const [transactionsToArchiveCount, setTransactionsToArchiveCount] = useState(0);
+  const [archiveButtonPressed, setArchiveButtonPressed] = useState(false);
   
   const months = [
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
   ];
+  
+  // Format date to DD/MM/YYYY
+  const formatDate = (date) => {
+    if (!date) return '';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   const loadData = async () => {
     try {
@@ -112,17 +125,7 @@ const Settings = () => {
         
         setAvailableMonths(monthsData);
         
-        // Set archive months (older than 3 months)
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-        const threeMonthsAgoKey = `${threeMonthsAgo.getFullYear()}-${threeMonthsAgo.getMonth()}`;
-        
-        const oldMonths = monthsData.filter(month => {
-          const monthDate = new Date(month.year, month.month);
-          return monthDate < threeMonthsAgo;
-        });
-        
-        setArchiveMonths(oldMonths);
+        // We don't need to set archiveMonths anymore as we're using a date picker now
       }
     } catch (error) {
       console.error('Error loading available months:', error);
@@ -199,35 +202,82 @@ const Settings = () => {
     handleExportData();
   };
   
-  const handleShowArchiveOptions = () => {
-    if (archiveMonths.length === 0) {
-      Alert.alert(
-        "Aucune donnée à archiver",
-        "Il n'y a pas de données antérieures à 3 mois à archiver."
-      );
-      return;
-    }
+  const handleShowArchiveOptions = async () => {
+    // Initialize with current date
+    const today = new Date();
+    const defaultArchiveDate = new Date();
+    defaultArchiveDate.setMonth(today.getMonth() - 3); // Default to 3 months ago
+    setArchiveDate(defaultArchiveDate);
     
-    setArchiveModalVisible(true);
+    try {
+      // Check if there are any transactions to archive
+      const transactionsResult = await transactionService.getTransactions();
+      
+      if (!transactionsResult.success || transactionsResult.transactions.length === 0) {
+        Alert.alert("Aucune donnée à archiver", "Aucune transaction disponible pour l'archivage.");
+        return;
+      }
+      
+      // Count transactions older than the selected date
+      await checkTransactionsToArchive(defaultArchiveDate);
+      
+      setArchiveModalVisible(true);
+    } catch (error) {
+      console.error('Error checking archive transactions:', error);
+      Alert.alert("Erreur", "Impossible de vérifier les transactions à archiver.");
+    }
+  };
+  
+  const onArchiveDateChange = (event, selectedDate) => {
+    setShowArchiveDatePicker(false);
+    if (selectedDate) {
+      setArchiveDate(selectedDate);
+      checkTransactionsToArchive(selectedDate);
+    }
+  };
+  
+  const checkTransactionsToArchive = async (date) => {
+    try {
+      const transactionsResult = await transactionService.getTransactions();
+      
+      if (transactionsResult.success) {
+        // Count transactions older than the selected date
+        const count = transactionsResult.transactions.filter(transaction => {
+          let transactionDate;
+          if (transaction.date) {
+            const parts = transaction.date.split('/');
+            if (parts.length === 3) {
+              transactionDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            }
+          } else if (transaction.createdAt) {
+            transactionDate = new Date(transaction.createdAt);
+          }
+          
+          return transactionDate && transactionDate < date;
+        }).length;
+        
+        setTransactionsToArchiveCount(count);
+      }
+    } catch (error) {
+      console.error('Error counting transactions to archive:', error);
+    }
   };
   
   const handleArchiveData = async () => {
     try {
-      if (archiveMonths.length === 0) {
+      if (transactionsToArchiveCount === 0) {
+        Alert.alert("Information", "Aucune transaction à archiver avant cette date.");
         setArchiveModalVisible(false);
         return;
       }
       
       setRefreshing(true);
       
-      // Find the most recent date to archive (transactions before this date will be archived)
-      const archiveBefore = new Date();
-      archiveBefore.setMonth(archiveBefore.getMonth() - 3); // Archive data older than 3 months
+      // Use the selected date as the cutoff for archiving
+      const archiveBefore = archiveDate;
       
       // First check if there are actually transactions to archive
-      const transactionsResult = await transactionService.getTransactions({
-        olderThan: archiveBefore
-      });
+      const transactionsResult = await transactionService.getTransactions();
       
       if (!transactionsResult.success) {
         Alert.alert("Erreur", "Impossible de vérifier les transactions à archiver.");
@@ -236,7 +286,7 @@ const Settings = () => {
         return;
       }
       
-      // Filter transactions older than 3 months
+      // Filter transactions older than the selected date
       const transactionsToArchive = transactionsResult.transactions.filter(transaction => {
         let date;
         if (transaction.date) {
@@ -255,7 +305,7 @@ const Settings = () => {
       if (transactionsToArchive.length === 0) {
         Alert.alert(
           "Aucune donnée à archiver",
-          "Il n'y a pas de transactions plus anciennes que 3 mois à archiver."
+          "Il n'y a pas de transactions à archiver avant la date sélectionnée."
         );
         setRefreshing(false);
         setArchiveModalVisible(false);
@@ -264,13 +314,13 @@ const Settings = () => {
       
       Alert.alert(
         "Confirmation d'archivage",
-        `Êtes-vous sûr de vouloir archiver les données antérieures à ${archiveBefore.toLocaleDateString()} ? Cette action déplacera ${transactionsToArchive.length} transactions dans une archive et les retirera de l'affichage principal. Vous pourrez toujours les consulter dans les archives.`,
+        `Êtes-vous sûr de vouloir archiver les données antérieures au ${formatDate(archiveDate)} ? Cette action déplacera ${transactionsToArchive.length} transactions dans une archive et les retirera de l'affichage principal. Vous pourrez toujours les consulter dans les archives.`,
         [
           { text: "Annuler", style: "cancel" },
           { 
             text: "Archiver", 
             onPress: async () => {
-              const result = await transactionService.archiveTransactions(archiveBefore);
+              const result = await transactionService.archiveTransactions(archiveDate);
               
               if (result.success) {
                 Alert.alert(
@@ -573,7 +623,7 @@ const Settings = () => {
             style={styles.actionButton}
             onPress={() => navigation.navigate('ArchivedTransactions')}
           >
-            <Icon name="archive-search" size={24} color={colors.secondary} />
+            <Icon name="archive-search" size={24} color={colors.crimson} />
             <Text style={styles.actionButtonText}>Consulter les données archivées</Text>
             <Icon name="chevron-right" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -661,36 +711,79 @@ const Settings = () => {
             </View>
             
             <View style={styles.archiveInfo}>
-              <Text style={styles.archiveInfoText}>
-                L'archivage déplacera les transactions antérieures à 3 mois vers les archives. 
-                Cela permettra d'améliorer les performances de l'application.
-              </Text>
-              <Text style={styles.archiveInfoText}>
-                Vous pouvez toujours consulter ces données dans les archives au besoin.
-              </Text>
-              <Text style={[styles.archiveInfoText, { fontWeight: 'bold', marginTop: 10 }]}>
-                Données à archiver:
-              </Text>
-              {archiveMonths.map(month => (
-                <Text key={month.key} style={styles.archiveMonth}>
-                  • {month.label}: {month.count} transactions
-                </Text>
-              ))}
+              <View style={styles.archiveCardContainer}>
+                <View style={styles.archiveDateCard}>
+                  <Text style={styles.archiveDateCardTitle}>
+                    Sélectionnez une date limite
+                  </Text>
+                  
+                  <TouchableOpacity
+                    style={styles.dateSelectorEnhanced}
+                    onPress={() => setShowArchiveDatePicker(true)}
+                  >
+                    <View style={styles.dateSelectorContent}>
+                      <Icon name="calendar" size={24} color={colors.primary} />
+                      <Text style={styles.dateSelectorValueEnhanced}>
+                        {formatDate(archiveDate)}
+                      </Text>
+                    </View>
+                    <Text style={styles.dateSelectorHelp}>Appuyez pour modifier</Text>
+                  </TouchableOpacity>
+                  
+                  {showArchiveDatePicker && (
+                    <DateTimePicker
+                      value={archiveDate}
+                      mode="date"
+                      display="default"
+                      onChange={onArchiveDateChange}
+                      maximumDate={new Date()}
+                    />
+                  )}
+                </View>
+              </View>
+              
+              <View style={styles.archiveResultContainer}>
+                <Icon 
+                  name={transactionsToArchiveCount > 0 ? "information" : "alert"} 
+                  size={24} 
+                  color={transactionsToArchiveCount > 0 ? colors.primary : colors.warning} 
+                />
+                
+                {transactionsToArchiveCount > 0 ? (
+                  <Text style={styles.archiveResultText}>
+                    <Text style={styles.archiveResultHighlight}>{transactionsToArchiveCount}</Text> transactions seront archivées
+                    (antérieures au {formatDate(archiveDate)}).
+                  </Text>
+                ) : (
+                  <Text style={styles.archiveResultTextWarning}>
+                    Aucune transaction trouvée avant cette date.
+                  </Text>
+                )}
+              </View>
             </View>
-            
-            <View style={styles.modalFooter}>
+            <View style={styles.modalFooterEnhanced}>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButtonEnhanced, styles.cancelButtonEnhanced]}
                 onPress={() => setArchiveModalVisible(false)}
               >
-                <Text style={styles.modalButtonText}>Annuler</Text>
+                <Icon name="close" size={18} color={colors.textPrimary} />
+                <Text style={styles.cancelButtonTextEnhanced}>Annuler</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmButton]}
+                style={[
+                  styles.modalButtonEnhanced, 
+                  styles.confirmButtonEnhanced,
+                  archiveButtonPressed && { backgroundColor: colors.warning },
+                  transactionsToArchiveCount === 0 && styles.disabledButtonEnhanced
+                ]}
                 onPress={handleArchiveData}
+                disabled={transactionsToArchiveCount === 0}
+                onPressIn={() => setArchiveButtonPressed(true)}
+                onPressOut={() => setArchiveButtonPressed(false)}
               >
-                <Text style={[styles.modalButtonText, { color: colors.white }]}>Archiver</Text>
+                <Icon name="archive" size={18} color={colors.white} />
+                <Text style={styles.confirmButtonTextEnhanced}>Archiver</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -870,6 +963,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.divider,
   },
+  modalFooterEnhanced: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: spacing.medium,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
   modalButton: {
     paddingVertical: spacing.small,
     paddingHorizontal: spacing.large,
@@ -877,23 +977,147 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  modalButtonEnhanced: {
+    flexDirection: 'row',
+    paddingVertical: spacing.medium,
+    paddingHorizontal: spacing.large,
+    borderRadius: borderRadius.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '45%',
+    backgroundColor: colors.backgroundAlt,
+  },
   cancelButton: {
-    backgroundColor: colors.lightGray,
+    backgroundColor: colors.darkBlue,
+  },
+  cancelButtonEnhanced: {
+    backgroundColor: colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   confirmButton: {
     backgroundColor: colors.primary,
+  },
+  confirmButtonEnhanced: {
+    backgroundColor: colors.primary, 
+    borderWidth: 1,
+    borderColor: colors.textSecondary,
+  },
+  disabledButtonEnhanced: {
+    backgroundColor: colors.textDisabled,
+    opacity: 0.8,
   },
   modalButtonText: {
     fontSize: typography.sizeRegular,
     fontWeight: typography.weightMedium,
   },
+  cancelButtonTextEnhanced: {
+    fontSize: typography.sizeRegular,
+    fontWeight: typography.weightSemiBold,
+    color: colors.textPrimary,
+    marginLeft: spacing.small,
+  },
+  confirmButtonTextEnhanced: {
+    fontSize: typography.sizeMedium,
+    fontWeight: typography.weightBold,
+    color: colors.white,
+    marginLeft: spacing.small,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   archiveInfo: {
     padding: spacing.medium,
+  },
+  archiveIconContainer: {
+    alignItems: 'center',
+    marginVertical: spacing.medium,
+  },
+  archiveTitle: {
+    fontSize: typography.sizeLarge,
+    fontWeight: typography.weightBold,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: spacing.medium,
   },
   archiveInfoText: {
     fontSize: typography.sizeRegular,
     color: colors.textPrimary,
+    marginBottom: spacing.medium,
+    textAlign: 'center',
+    lineHeight: typography.sizeRegular * 1.5,
+  },
+  archiveCardContainer: {
+    marginVertical: spacing.medium,
+  },
+  archiveDateCard: {
+    borderRadius: borderRadius.large,
+    padding: spacing.medium,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  archiveDateCardTitle: {
+    fontSize: typography.sizeRegular,
+    fontWeight: typography.weightSemiBold,
+    color: colors.textPrimary,
     marginBottom: spacing.small,
+  },
+  dateSelectorEnhanced: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.medium,
+    padding: spacing.medium,
+    marginTop: spacing.small,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  dateSelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.tiny,
+  },
+  dateSelectorValueEnhanced: {
+    fontSize: typography.sizeLarge,
+    fontWeight: typography.weightBold,
+    color: colors.primary,
+    marginLeft: spacing.small,
+  },
+  dateSelectorHelp: {
+    fontSize: typography.sizeSmall,
+    color: colors.textSecondary,
+    marginTop: spacing.tiny,
+  },
+  archiveResultContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.primary}10`,
+    borderRadius: borderRadius.medium,
+    padding: spacing.medium,
+    marginVertical: spacing.medium,
+  },
+  archiveResultText: {
+    flex: 1,
+    fontSize: typography.sizeRegular,
+    color: colors.textPrimary,
+    marginLeft: spacing.small,
+  },
+  archiveResultTextWarning: {
+    flex: 1,
+    fontSize: typography.sizeRegular,
+    color: colors.warning,
+    marginLeft: spacing.small,
+    fontWeight: typography.weightMedium,
+  },
+  archiveResultHighlight: {
+    fontWeight: typography.weightBold,
+    color: colors.primary,
+  },
+  archiveNote: {
+    fontSize: typography.sizeSmall,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   archiveMonth: {
     fontSize: typography.sizeRegular,
