@@ -14,7 +14,6 @@ const Dashboard = () => {
     const [showEndDate, setShowEndDate] = useState(false);
     const [dateFilterModalVisible, setDateFilterModalVisible] = useState(false);
     
-    // Calculate default date ranges
     const getCurrentMonthDates = () => {
         const today = new Date();
         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
