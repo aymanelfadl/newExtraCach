@@ -37,6 +37,7 @@ const Expense = () => {
       }
       setError(null);
       
+      
       // Get expense transactions from the transaction service
       const result = await transactionService.getTransactions({ 
         type: 'expense',
@@ -286,26 +287,15 @@ const Expense = () => {
       // When the app comes back online, try to sync offline data
       const syncData = async () => {
         try {
-          // First, remove offline items from the local state to avoid duplication during sync
-          const offlineIds = expenses
-            .filter(expense => expense.id && expense.id.startsWith('offline_'))
-            .map(expense => expense.id);
-            
-          if (offlineIds.length > 0) {
-            const offlineIdSet = new Set(offlineIds);
-            // Remove offline items as they'll be replaced with synced versions
-            setExpenses(prevExpenses => 
-              prevExpenses.filter(expense => !offlineIdSet.has(expense.id))
-            );
-          }
-          
+          // Remove all local offline transactions before syncing
+          setExpenses(prevExpenses => prevExpenses.filter(expense => {
+            return !(expense.id && (expense.id.startsWith('offline_') || expense.id.startsWith('temp_')));
+          }));
           // Then sync the offline data
           const result = await transactionService.syncOfflineTransactions();
-          
           if (result.success && result.syncedCount > 0) {
             // Reload expenses to get updated data from server including the synced items
             await loadExpenses();
-            
             // Show a success message
             Alert.alert(
               "Synchronisation terminée",
@@ -316,7 +306,6 @@ const Expense = () => {
           console.error('Error syncing offline data:', error);
         }
       };
-      
       syncData();
     }
   }, [isOnline]); // Only run when online status changes to true

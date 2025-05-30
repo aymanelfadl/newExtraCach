@@ -286,19 +286,10 @@ const Revenue = () => {
       // When the app comes back online, try to sync offline data
       const syncData = async () => {
         try {
-          // First, remove offline items from the local state to avoid duplication during sync
-          const offlineIds = revenues
-            .filter(revenue => revenue.id && revenue.id.startsWith('offline_'))
-            .map(revenue => revenue.id);
-            
-          if (offlineIds.length > 0) {
-            const offlineIdSet = new Set(offlineIds);
-            // Remove offline items as they'll be replaced with synced versions
-            setRevenues(prevRevenues => 
-              prevRevenues.filter(revenue => !offlineIdSet.has(revenue.id))
-            );
-          }
-          
+          // Remove all local offline transactions before syncing
+          setRevenues(prevRevenues => prevRevenues.filter(revenue => {
+            return !(revenue.id && (revenue.id.startsWith('offline_') || revenue.id.startsWith('temp_')));
+          }));
           // Then sync the offline data
           const result = await transactionService.syncOfflineTransactions();
           

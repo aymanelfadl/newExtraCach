@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Text, TouchableOpacity, Alert, Modal, RefreshControl } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { HomeButton } from "../../components/HomeButton";
 import AddExpense from '../../components/AddExpense';
 import AddRevenue from '../../components/AddRevenue';
 import Header from '../../components/Header';
 import { colors, spacing, borderRadius, typography, shadows, commonStyles } from '../../styles/theme';
-import { authService, userService, transactionService } from '../../services/index';
+import { userService, transactionService } from '../../services/index';
 import { useUser } from '../../context/UserContext';
 
 const Home = () => {
+  const navigation = useNavigation();
   const { user, viewingAs, setViewingAsUser } = useUser(); 
   const [expenseModalVisible, setExpenseModalVisible] = useState(false);
   const [revenueModalVisible, setRevenueModalVisible] = useState(false);
@@ -42,55 +44,33 @@ const Home = () => {
   const fetchTransactions = useCallback(async () => {
     setRefreshing(true);
     try {
-      const userId = effectiveUser?.uid;
-      const { success, transactions, error } = await transactionService.getTransactions({ 
-        // Pass userId if the service expects it, or don't include it if it uses getCurrentUserId internally
-        // userId: userId 
-      });
-      
+      const { success, transactions, error } = await transactionService.getTransactions({});
       if (!success) {
         Alert.alert("Erreur", "Impossible de récupérer les transactions.\n" + (error || ''));
         return;
       }
-      
-      console.log("Total transactions fetched:", transactions.length);
-      console.log("Today's date for filtering:", todayDate);
-      
-      // Add debugging to check date formats
-      if (transactions.length > 0) {
-        console.log("Sample transaction dates:", 
-          transactions.slice(0, 3).map(t => ({ 
-            dateAdded: t.dateAdded, 
-            date: t.date,
-            type: t.type,
-            isExpense: t.type === 'expense' ? true : false
-          }))
-        );
-      }
-      
-      // Improved filter to handle both dateAdded and date fields
+      // Use the current selected date for filtering (default: today)
+      // We'll use todayDate as the selected date for now
+      const selectedDate = todayDate;
       const todayTxs = transactions.filter(t => {
+        // Prefer dateAdded, fallback to date
         const transactionDate = t.dateAdded || t.date;
-        return transactionDate === todayDate;
+        return transactionDate === selectedDate;
       }).map(transaction => {
-        // Ensure isExpense is correctly set based on transaction type
         return {
           ...transaction,
-          isExpense: transaction.type === 'expense', // This will be true for expenses, false for revenues
-          dateAdded: transaction.dateAdded || transaction.date, // Ensure dateAdded is available
-          spends: transaction.spends || transaction.amount // Ensure spends property exists
+          isExpense: transaction.type === 'expense',
+          dateAdded: transaction.dateAdded || transaction.date,
+          spends: transaction.spends || transaction.amount
         };
       });
-      
-      console.log("Filtered today's transactions:", todayTxs.length);
-      
       todayTxs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setRecentTransactions(todayTxs);
     } catch (e) {
       console.error('Error fetching transactions:', e);
     }
     setRefreshing(false);
-  }, [effectiveUser, todayDate]);
+  }, [todayDate, viewingAs, user]);
 
   useEffect(() => {
     fetchTransactions();
@@ -106,6 +86,7 @@ const Home = () => {
       ...expenseData,
       description: expenseData.description,
       spends: Number(expenseData.spends),
+      type: 'expense', // Ensure type is set
       isExpense: true,
       createdAt: new Date().toISOString(),
       time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
@@ -133,6 +114,7 @@ const Home = () => {
       ...revenueData,
       description: revenueData.description,
       spends: Number(revenueData.spends),
+      type: 'revenue', // Ensure type is set
       isExpense: false,
       createdAt: new Date().toISOString(),
       time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
@@ -170,11 +152,11 @@ const Home = () => {
 
   // Calculate today's summary - Make sure we're using the right property to determine if it's an expense
   const todayIncome = recentTransactions
-    .filter(t => !t.isExpense && t.type === 'revenue')
+    .filter(t => t.type === 'revenue')
     .reduce((sum, t) => sum + (Number(t.spends || t.amount) || 0), 0);
     
   const todayExpenses = recentTransactions
-    .filter(t => t.isExpense || t.type === 'expense')
+    .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + (Number(t.spends || t.amount) || 0), 0);
     
   const todayBalance = todayIncome - todayExpenses;
@@ -214,7 +196,8 @@ const Home = () => {
         if (viewingAs) {
           Alert.alert("Action limitée", "Vous ne pouvez pas effectuer cette action lorsque vous consultez le compte d'un autre utilisateur.");
         } else {
-          Alert.alert("Info", "Bientôt disponible : gestion des dépenses employé !");
+          // Navigate to the Employees screen
+          navigation.navigate('Employees');
         }
       },
       backgroundColor: colors.primary,
