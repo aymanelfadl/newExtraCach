@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -14,8 +14,7 @@ export default function Employees() {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
-    name: '',
-    salary: ''
+    name: ''
   });
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
@@ -120,20 +119,19 @@ export default function Employees() {
       return;
     }
     
-    setNewEmployee({ name: '', salary: '' });
+    setNewEmployee({ name: '' });
     setModalVisible(true);
   };
 
   const handleSaveEmployee = async () => {
-    if (!newEmployee.name || !newEmployee.salary) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+    if (!newEmployee.name) {
+      Alert.alert('Erreur', 'Veuillez entrer le nom de l\'employé');
       return;
     }
     
     try {
       const employeeData = {
         ...newEmployee,
-        salary: parseFloat(newEmployee.salary),
         expenses: [],
         payments: []
       };
@@ -143,7 +141,7 @@ export default function Employees() {
       if (result.success) {
         setEmployees([result.employee, ...employees]);
         setModalVisible(false);
-        setNewEmployee({ name: '', salary: '' });
+        setNewEmployee({ name: '' });
         
         if (result.isOffline) {
           Alert.alert('Mode hors ligne', 'L\'employé a été ajouté en mode hors ligne et sera synchronisé dès que vous serez connecté.');
@@ -209,7 +207,6 @@ export default function Employees() {
     );
   };
 
-  const totalSalaries = employees.reduce((sum, emp) => sum + (Number(emp.salary) || 0), 0);
   const totalPayments = employees.reduce((sum, emp) => 
     sum + (emp.payments?.reduce((acc, payment) => acc + (Number(payment.amount) || 0), 0) || 0), 
   0);
@@ -254,13 +251,6 @@ export default function Employees() {
           <Text style={styles.summaryLabel}>Total Employés</Text>
           <Text style={styles.summaryValue}>{employees.length}</Text>
         </View>
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Masse Salariale</Text>
-          <Text style={styles.summaryValue}>
-            {totalSalaries} MAD
-          </Text>
-        </View>
       </View>      
       <View style={styles.header}>
         <Text style={styles.title}>Liste des employés</Text>
@@ -297,7 +287,6 @@ export default function Employees() {
             <View style={styles.employeeInfo}>
               <Text style={styles.employeeName}>{item.name}</Text>
               <Text style={styles.employeePosition}>{item.position}</Text>
-              <Text style={styles.employeeSalary}>Salaire: {item.salary} MAD</Text>
               <Text style={styles.employeeLastPayment}>
                 Dernier paiement: {item.lastPayment || 'Non défini'}
               </Text>
@@ -364,15 +353,6 @@ export default function Employees() {
                 value={newEmployee.name}
                 onChangeText={(text) => setNewEmployee({...newEmployee, name: text})}
                 placeholder="Nom et prénom"
-              />
-              
-              <Text style={styles.inputLabel}>Salaire (MAD)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={newEmployee.salary}
-                onChangeText={(text) => setNewEmployee({...newEmployee, salary: text})}
-                placeholder="Montant du salaire"
-                keyboardType="numeric"
               />
               
               <View style={styles.modalActions}>
@@ -528,10 +508,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizeSmall, 
     color: colors.textSecondary, 
     marginBottom: spacing.tiny,
-  },
-  employeeSalary: {
-    fontSize: typography.sizeSmall,
-    color: colors.textSecondary,
   },
   employeeLastPayment: {
     fontSize: typography.sizeSmall,
