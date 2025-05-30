@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { transactionService } from '../../services';
+import { transactionService, employeeService } from '../../services';
 import { colors, typography, shadows, spacing, borderRadius } from '../../styles/theme';
 import { useUser } from '../../context/UserContext';
-import { LineChart } from 'react-native-chart-kit';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const Dashboard = () => {
@@ -30,13 +29,13 @@ const Dashboard = () => {
         return { startDate: firstDay, endDate: lastDay };
     };
 
-    // Initialize with current month's date range
     const [dateRange, setDateRange] = useState(getCurrentMonthDates());
 
     const [summary, setSummary] = useState({
         totalIncome: 0,
         totalExpenses: 0,
         balance: 0,
+        totalEmployeePayments: 0,
         categories: {
             income: [],
             expenses: []
@@ -116,7 +115,11 @@ const Dashboard = () => {
         try {
             setRefreshing(true);
 
+            // Fetch transactions
             const transactionResult = await transactionService.getTransactions();
+            
+            // Fetch employees for payment data
+            const employeeResult = await employeeService.getEmployees();
 
             if (transactionResult.success) {
                 const transactions = transactionResult.transactions || [];
@@ -208,9 +211,30 @@ const Dashboard = () => {
                     percentage: Math.round((value / (totalExpenses || 1)) * 100)
                 })).sort((a, b) => b.value - a.value);
 
+                // Calculate total employee payments
+                let totalEmployeePayments = 0;
+                
+                if (employeeResult.success) {
+                    const employees = employeeResult.employees || [];
+                    
+                    // Filter payments by date range if applicable
+                    employees.forEach(employee => {
+                        if (employee.payments && Array.isArray(employee.payments)) {
+                            employee.payments.forEach(payment => {
+                                const paymentDate = new Date(payment.createdAt || payment.date);
+                                if (paymentDate >= dateRange.startDate && 
+                                    paymentDate <= dateRange.endDate) {
+                                    totalEmployeePayments += Number(payment.amount) || 0;
+                                }
+                            });
+                        }
+                    });
+                }
+                
                 setSummary({
                     totalIncome,
                     totalExpenses,
+                    totalEmployeePayments,
                     balance: totalIncome - totalExpenses,
                     categories: {
                         income: incomeCategList.slice(0, 3),
@@ -309,6 +333,18 @@ const Dashboard = () => {
                         <Text style={styles.financialCardLabel}>Total Dépenses</Text>
                         <Text style={styles.financialCardValue}>
                             -{summary.totalExpenses.toFixed(2)} MAD
+                        </Text>
+                    </View>
+                    
+                    <View style={styles.cardSeparator} />
+                    
+                    <View style={[styles.financialCard, styles.employeePaymentCard]}>
+                        <View style={styles.financialCardIconContainer}>
+                            <Icon name="account-cash" size={32} color={colors.white} />
+                        </View>
+                        <Text style={styles.financialCardLabel}>Total Paiements Employés</Text>
+                        <Text style={styles.financialCardValue}>
+                            {summary.totalEmployeePayments.toFixed(2)} MAD
                         </Text>
                     </View>
                 </View>
@@ -541,6 +577,9 @@ const styles = StyleSheet.create({
     },
     balanceNegativeCard: {
         backgroundColor: colors.expense,
+    },
+    employeePaymentCard: {
+        backgroundColor: colors.primary,
     },
     financialCardLabel: {
         fontSize: typography.sizeMedium,
