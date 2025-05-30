@@ -9,9 +9,6 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, typography, spacing, borderRadius } from '../styles/theme';
 
-/**
- * Reusable input field component with icon and optional visibility toggle
- */
 const FormInput = ({
   label,
   iconName,

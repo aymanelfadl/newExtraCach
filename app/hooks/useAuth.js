@@ -2,34 +2,22 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { authService } from '../../services/index';
 
-/**
- * Custom hook to handle authentication logic
- */
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-
-  /**
-   * Validate form input fields
-   */
   const validateForm = (isLogin, email, password, confirmPassword = '', fullName = '') => {
-    // Reset error message
     setErrorMessage('');
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setErrorMessage('Veuillez saisir une adresse email valide');
       return false;
     }
 
-    // Password validation
     if (password.length < 6) {
       setErrorMessage('Le mot de passe doit contenir au moins 6 caractères');
       return false;
     }
-
-    // Registration form validation
     if (!isLogin) {
       if (password !== confirmPassword) {
         setErrorMessage('Les mots de passe ne correspondent pas');
@@ -45,9 +33,6 @@ export const useAuth = () => {
     return true;
   };
 
-  /**
-   * Handle login process
-   */
   const handleLogin = async (email, password, isOnline) => {
     if (!isOnline) {
       setErrorMessage('Mode hors ligne. Connexion Internet requise pour l\'authentification.');
@@ -87,9 +72,6 @@ export const useAuth = () => {
     }
   };
 
-  /**
-   * Handle registration process
-   */
   const handleRegister = async (email, password, fullName, isOnline) => {
     if (!isOnline) {
       setErrorMessage('Mode hors ligne. Connexion Internet requise pour l\'inscription.');
@@ -132,9 +114,6 @@ export const useAuth = () => {
     }
   };
 
-  /**
-   * Generate appropriate error title based on error message
-   */
   const getErrorTitle = (errorString) => {
     if (errorString.includes('timed out') || errorString.includes('timeout') || errorString.includes('expirée')) {
       return 'Délai d\'attente dépassé';
@@ -146,9 +125,6 @@ export const useAuth = () => {
     return 'Erreur';
   };
 
-  /**
-   * Generate appropriate error message based on error message
-   */
   const getErrorMessage = (errorString) => {
     if (errorString.includes('timed out') || errorString.includes('timeout') || errorString.includes('expirée')) {
       return 'La connexion a pris trop de temps. Veuillez vérifier votre connexion internet et réessayer.';

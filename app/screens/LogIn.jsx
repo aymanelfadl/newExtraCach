@@ -18,7 +18,7 @@ import { colors, typography, spacing, borderRadius, shadows } from '../../styles
 import { useUser } from '../../context/UserContext';
 
 const LogIn = () => {
-  
+
   const FormInput = require('../../components/FormInput').default;
   const { useAuth } = require('../hooks/useAuth');
   
@@ -31,7 +31,6 @@ const LogIn = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
   
-  // Use the custom auth hook for authentication logic
   const { 
     loading, 
     errorMessage, 
@@ -40,19 +39,15 @@ const LogIn = () => {
     handleLogin, 
     handleRegister 
   } = useAuth();
-
-  // Clear error message when form fields change
   useEffect(() => {
     setErrorMessage('');
   }, [email, password, confirmPassword, fullName, isLogin, setErrorMessage]);
 
   const handleSubmit = async () => {
-    // Validate form
     if (!validateForm(isLogin, email, password, confirmPassword, fullName)) {
       return;
     }
     
-    // Handle login or registration based on mode
     if (isLogin) {
       await handleLogin(email, password, isOnline);
     } else {
@@ -94,15 +89,12 @@ const LogIn = () => {
                   : 'Inscrivez-vous pour commencer à gérer vos finances'}
               </Text>
 
-              {/* Error message display */}
               {errorMessage ? (
                 <View style={styles.errorContainer}>
                   <Icon name="alert-circle" size={16} color={colors.error} />
                   <Text style={styles.errorText}>{errorMessage}</Text>
                 </View>
               ) : null}
-
-              {/* Registration fields */}
               {!isLogin && (
                 <FormInput
                   label="Nom complet"
@@ -114,7 +106,6 @@ const LogIn = () => {
                 />
               )}
 
-              {/* Email field */}
               <FormInput
                 label="Email"
                 iconName="email"
@@ -125,7 +116,6 @@ const LogIn = () => {
                 autoCapitalize="none"
               />
 
-              {/* Password field */}
               <FormInput
                 label="Mot de passe"
                 iconName="lock"
@@ -138,7 +128,6 @@ const LogIn = () => {
                 toggleVisibility={togglePasswordVisibility}
               />
 
-              {/* Confirm Password field (for registration) */}
               {!isLogin && (
                 <FormInput
                   label="Confirmer le mot de passe"
@@ -153,7 +142,6 @@ const LogIn = () => {
                 />
               )}
 
-              {/* Submit Button */}
               <TouchableOpacity 
                 style={styles.submitButton}
                 onPress={handleSubmit}
@@ -168,7 +156,6 @@ const LogIn = () => {
                 )}
               </TouchableOpacity>
 
-              {/* Toggle between login and register */}
               <TouchableOpacity onPress={toggleAuthMode} style={styles.toggleContainer}>
                 <Text style={styles.toggleText}>
                   {isLogin 

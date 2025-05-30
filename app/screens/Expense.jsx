@@ -23,10 +23,9 @@ const Expense = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   
-  // Load expenses when component mounts
   useEffect(() => {
     loadExpenses();
-  }, []);
+  }, [handleSaveExpense, handleEditPress, handleDeletePress]);
   
   // Load expenses from service
   const loadExpenses = async (showRefreshing = false) => {
