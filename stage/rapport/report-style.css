@@ -1,0 +1,154 @@
+body {
+  font-family: 'times new roman', Arial, sans-serif;
+  margin: 2cm 2cm 2cm 2cm;
+  color: #000;
+  font-size: 16px;
+  line-height: 0.8cm;
+  background: #fff;
+}
+h1, h2, h3, h4, h5, h6 {
+  color: #1a237e;
+  font-weight: bold;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+}
+h1 {
+  font-size: 2em;
+  border-bottom: 2px solid #1a237e;
+  padding-bottom: 0.2em;
+  margin-bottom: 1em;
+}
+h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid #1a237e;
+  padding-bottom: 0.1em;
+  margin-bottom: 0.8em;
+}
+h3 {
+  font-size: 1.2em;
+  margin-bottom: 0.5em;
+}
+p, li, td, th {
+  font-size: 12pt;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1.5em;
+}
+th, td {
+  border: 1px solid #bbb;
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+img {
+  display: block;
+  margin: 0.5em auto;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 1px 6px #e0e0e0;
+}
+.toc {
+  margin-bottom: 2em;
+  font-size: 1.3em;
+  border-radius: 8px;
+  padding: 1.5em 2em;
+  box-shadow: 0 2px 8px #e3e6ed;
+}
+.toc h1, .toc h2, .toc h3 {
+  color: #333;
+  border: none;
+  margin: 0.2em 0;
+  font-size: 2.4em; /* Make TOC title bigger */
+  font-weight: normal;
+}
+.toc ol, .toc ul {
+  margin-left: 1.5em;
+  padding-left: 0.5em;
+}
+.toc a {
+  color: #000;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.toc a:hover {
+  color: #3949ab;
+  text-decoration: underline;
+}
+.toc-md {
+  font-size: 1.4em;
+  font-weight: bold;
+  margin-bottom: 2em;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.toc-md h1, .toc-md h2, .toc-md h3 {
+  font-size: 2.2em;
+  color: #1a237e;
+  margin-top: 0;
+  margin-bottom: 0.7em;
+  font-weight: bold;
+  text-align: center;
+}
+.toc-md ul, .toc-md ol {
+  margin-left: 1.5em;
+  padding-left: 0.5em;
+}
+.toc-md a {
+  color: #1a237e;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.2s;
+}
+.toc-md a:hover {
+  color: #3949ab;
+  text-decoration: underline;
+}
+div[style*="text-align: justify"] {
+  text-align: justify;
+}
+/* Style for screen image containers */
+div[style*="text-align: center;"] {
+  margin: 8px;
+  background: #f5f7fa;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px #d1d5db;
+  padding: 1.2em 0 1em 0;
+  margin-bottom: 1.5em;
+}
+@page {
+  margin: 2.5cm 2cm 2cm 2cm;
+}
+@media print {
+  body {
+    font-size: 12pt;
+  }
+  .toc {
+    page-break-after: always;
+  }
+  header, footer {
+    display: block;
+    position: fixed;
+    width: 100%;
+    color: #888;
+    font-size: 0.9em;
+  }
+  header {
+    top: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    content: "Rapport de Stage – ExtraCash – Ayman El Fadl";
+  }
+  footer {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: right;
+    content: counter(page);
+  }
+}
